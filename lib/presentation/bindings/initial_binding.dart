@@ -1,0 +1,21 @@
+import 'package:get/get.dart';
+import '../../core/database/db_helper.dart';
+import '../../data/repositories/repositories.dart';
+import '../controllers/dashboard_controller.dart'; // Add this import
+
+class InitialBinding extends Bindings {
+  @override
+  void dependencies() {
+    // 1. Core Database
+    Get.put(DatabaseHelper.instance, permanent: true);
+
+    // 2. Global Repositories
+    Get.lazyPut(() => RateRepository(), fenix: true);
+    Get.lazyPut(() => TraderRepository(), fenix: true);
+    Get.lazyPut(() => PurchaseRepository(), fenix: true);
+    Get.lazyPut(() => SalesRepository(), fenix: true);
+
+    // 3. App-Level Controllers
+    Get.put(DashboardController()); // Use put() so it initializes immediately on launch
+  }
+}
