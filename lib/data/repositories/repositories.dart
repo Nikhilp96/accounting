@@ -18,12 +18,14 @@ class RateRepository {
 
   Future<int> updateRate(String itemName, double newRate) async {
     final db = await dbHelper.database;
-    return await db.update(
+    int id = await db.update(
       DatabaseHelper.tableRates,
       {'rate': newRate},
       where: 'item_name = ?',
       whereArgs: [itemName],
     );
+    BackupService.exportToExcel();
+    return id;
   }
 }
 
@@ -64,10 +66,12 @@ class TraderRepository {
 
   Future<int> addTrader(TraderModel trader) async {
     final db = await dbHelper.database;
-    return await db.insert(DatabaseHelper.tableTraders, {
+    int id = await db.insert(DatabaseHelper.tableTraders, {
       'name': trader.name,
       'category': trader.category,
     });
+    BackupService.exportToExcel();
+    return id;
   }
 }
 
@@ -172,5 +176,77 @@ class SalesRepository {
       orderBy: 'date DESC',
     );
     return maps.map((e) => SaleModel.fromMap(e)).toList();
+  }
+}
+
+class StockRepository {
+  final DatabaseHelper dbHelper = DatabaseHelper.instance;
+
+  Future<StockModel?> getStock(
+    String shopCode,
+    String date,
+    String itemType,
+  ) async {
+    final db = await dbHelper.database;
+    final maps = await db.query(
+      DatabaseHelper.tableStock,
+      where: 'shop_code = ? AND date = ? AND item_type = ?',
+      whereArgs: [shopCode, date, itemType],
+    );
+    if (maps.isNotEmpty) {
+      return StockModel.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<void> saveStock(StockModel stock) async {
+    final db = await dbHelper.database;
+    final existing = await getStock(stock.shopCode, stock.date, stock.itemType);
+
+    if (existing != null) {
+      // Create a map without the ID for the update payload
+      final updateData = stock.toMap();
+      updateData.remove('id');
+
+      await db.update(
+        DatabaseHelper.tableStock,
+        updateData,
+        where: 'id = ?',
+        whereArgs: [existing.id],
+      );
+    } else {
+      // For insertion, we don't include the ID at all,
+      // let SQLite handle the AUTOINCREMENT
+      final insertData = stock.toMap();
+      insertData.remove('id');
+
+      await db.insert(DatabaseHelper.tableStock, insertData);
+    }
+    BackupService.exportToExcel();
+  }
+}
+
+class ExpenseRepository {
+  final DatabaseHelper dbHelper = DatabaseHelper.instance;
+
+  Future<int> addExpense(ExpenseModel expense) async {
+    final db = await dbHelper.database;
+    int id = await db.insert(DatabaseHelper.tableExpenses, expense.toMap());
+    BackupService.exportToExcel();
+    return id;
+  }
+
+  Future<List<ExpenseModel>> getExpensesByRange(
+    String shopCode,
+    String start,
+    String end,
+  ) async {
+    final db = await dbHelper.database;
+    final maps = await db.query(
+      DatabaseHelper.tableExpenses,
+      where: 'shop_code = ? AND date >= ? AND date <= ?',
+      whereArgs: [shopCode, start, end],
+    );
+    return maps.map((e) => ExpenseModel.fromMap(e)).toList();
   }
 }

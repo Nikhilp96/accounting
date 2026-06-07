@@ -50,43 +50,48 @@ class SalesEntryPage extends StatelessWidget {
             const SizedBox(height: 16),
 
             const Text(
-              'Enter Sold Quantities',
+              'Enter Sold Quantities & Rates',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const Divider(),
 
             // --- Dynamically Calculating Fields ---
             _buildWeightField(
-              'Broiler Weight (kg)',
+              'Broiler Wt (kg)',
               controller.broilerWt,
               controller.rateBroiler,
+              controller.wtBroilerCtrl,
+              controller.rateBroilerCtrl,
             ),
+            _buildMuttonSection(controller),
             _buildWeightField(
-              'Mutton Weight (kg)',
-              controller.muttonWt,
-              controller.rateMutton,
-            ),
-            _buildWeightField(
-              'Desi DP Weight (kg)',
+              'Desi DP Wt (kg)',
               controller.dpWt,
               controller.rateDP,
+              controller.wtDPCtrl,
+              controller.rateDPCtrl,
             ),
             _buildWeightField(
-              'Desi OG Weight (kg)',
+              'Desi OG Wt (kg)',
               controller.ogWt,
               controller.rateOG,
+              controller.wtOGCtrl,
+              controller.rateOGCtrl,
             ),
             _buildWeightField(
-              'Pota Kalegi Weight (kg)',
+              'Pota Kalegi Wt (kg)',
               controller.potaKalejiWt,
               controller.ratePotaKaleji,
+              controller.wtPotaCtrl,
+              controller.ratePotaCtrl,
             ),
 
-            // Eggs use integers (pieces) and divide by 12 for the dozen rate
             _buildEggField(
-              'Egg Quantity (Pieces)',
+              'Eggs (Pieces)',
               controller.eggQty,
               controller.rateEggsDozen,
+              controller.qtyEggsCtrl,
+              controller.rateEggsCtrl,
             ),
 
             const SizedBox(height: 10),
@@ -96,10 +101,10 @@ class SalesEntryPage extends StatelessWidget {
             ),
             const Divider(),
 
-            // Manual Total Entry
             Padding(
               padding: const EdgeInsets.only(bottom: 16.0),
               child: TextField(
+                controller: controller.totalAmountCtrl,
                 decoration: const InputDecoration(
                   labelText: 'Total Amount Collected (₹)',
                   border: OutlineInputBorder(),
@@ -118,7 +123,6 @@ class SalesEntryPage extends StatelessWidget {
               ),
             ),
 
-            // Live Calculation Output
             Obx(() {
               double diff = controller.differenceAmount;
               Color diffColor = diff >= 0
@@ -139,7 +143,6 @@ class SalesEntryPage extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black87,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -165,7 +168,7 @@ class SalesEntryPage extends StatelessWidget {
               ),
               onPressed: () {
                 controller.saveWeeklySale();
-                Get.back(); // Return to shop home
+                Get.back();
               },
               child: const Text(
                 'Save Weekly Sales',
@@ -179,29 +182,57 @@ class SalesEntryPage extends StatelessWidget {
   }
 
   // --- HELPER WIDGETS ---
-
-  Widget _buildWeightField(String label, RxDouble weightObs, RxDouble rateObs) {
+  Widget _buildWeightField(
+    String label,
+    RxDouble weightObs,
+    RxDouble rateObs,
+    TextEditingController wtCtrl,
+    TextEditingController rateCtrl,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextField(
-            decoration: InputDecoration(
-              labelText: label,
-              border: const OutlineInputBorder(),
-            ),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (val) => weightObs.value = double.tryParse(val) ?? 0.0,
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: TextField(
+                  controller: wtCtrl,
+                  decoration: InputDecoration(
+                    labelText: label,
+                    border: const OutlineInputBorder(),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: (val) =>
+                      weightObs.value = double.tryParse(val) ?? 0.0,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 1,
+                child: TextField(
+                  controller: rateCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Rate (₹)',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: (val) =>
+                      rateObs.value = double.tryParse(val) ?? 0.0,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 4),
-
-          // The line-item calculation wrapped in Obx
           Obx(() {
             double total = weightObs.value * rateObs.value;
-            // Only show the text if the total is greater than 0
             if (total == 0) return const SizedBox.shrink();
-
             return Padding(
               padding: const EdgeInsets.only(left: 8.0),
               child: Text(
@@ -219,27 +250,54 @@ class SalesEntryPage extends StatelessWidget {
     );
   }
 
-  Widget _buildEggField(String label, RxInt qtyObs, RxDouble rateObs) {
+  Widget _buildEggField(
+    String label,
+    RxInt qtyObs,
+    RxDouble rateObs,
+    TextEditingController qtyCtrl,
+    TextEditingController rateCtrl,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextField(
-            decoration: InputDecoration(
-              labelText: label,
-              border: const OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.number,
-            onChanged: (val) => qtyObs.value = int.tryParse(val) ?? 0,
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: TextField(
+                  controller: qtyCtrl,
+                  decoration: InputDecoration(
+                    labelText: label,
+                    border: const OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  onChanged: (val) => qtyObs.value = int.tryParse(val) ?? 0,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 1,
+                child: TextField(
+                  controller: rateCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Rate/Doz',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: (val) =>
+                      rateObs.value = double.tryParse(val) ?? 0.0,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 4),
-
-          // The Egg-specific calculation (divided by 12 for dozen rate)
           Obx(() {
             double total = (qtyObs.value / 12) * rateObs.value;
             if (total == 0) return const SizedBox.shrink();
-
             return Padding(
               padding: const EdgeInsets.only(left: 8.0),
               child: Text(
@@ -250,6 +308,144 @@ class SalesEntryPage extends StatelessWidget {
                   color: Colors.green.shade700,
                 ),
               ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMuttonSection(SalesEntryController controller) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16.0),
+      padding: const EdgeInsets.all(12.0),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Mutton Calculation',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.red.shade800,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Row 1: Stock Balances
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: controller.wtMuttonOpeningCtrl,
+                  decoration: const InputDecoration(
+                    labelText: "Yest. Unsold (kg)",
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: (val) => controller.muttonOpeningWt.value =
+                      double.tryParse(val) ?? 0.0,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: controller.wtMuttonClosingCtrl,
+                  decoration: const InputDecoration(
+                    labelText: "Today Unsold (kg)",
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: (val) => controller.muttonClosingWt.value =
+                      double.tryParse(val) ?? 0.0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Row 2: Raw Weight & Rate
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: TextField(
+                  controller: controller.wtMuttonCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Raw Mutton Wt (kg)',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: (val) =>
+                      controller.muttonWt.value = double.tryParse(val) ?? 0.0,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 1,
+                child: TextField(
+                  controller: controller.rateMuttonCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Rate (₹)',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: (val) =>
+                      controller.rateMutton.value = double.tryParse(val) ?? 0.0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Live Formula Output
+          Obx(() {
+            double billableWt =
+                (controller.muttonWt.value / 1.6) +
+                controller.muttonOpeningWt.value -
+                controller.muttonClosingWt.value;
+            if (billableWt < 0) billableWt = 0;
+            double total = billableWt * controller.rateMutton.value;
+
+            if (total == 0) return const SizedBox.shrink();
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Billable Wt: ${billableWt.toStringAsFixed(2)} kg',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey,
+                  ),
+                ),
+                Text(
+                  'Item Total: ₹${total.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade700,
+                  ),
+                ),
+              ],
             );
           }),
         ],

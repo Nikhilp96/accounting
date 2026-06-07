@@ -2,7 +2,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
 class DatabaseHelper {
-  static const String _databaseName = "shop_accounting_v2.db";
+  static const String _databaseName = "shop_accounting.db";
   static const int _databaseVersion = 1;
 
   // Table Names
@@ -10,6 +10,8 @@ class DatabaseHelper {
   static const String tableRates = 'item_rates';
   static const String tablePurchases = 'purchases';
   static const String tableSales = 'sales';
+  static const String tableStock = 'stock';
+  static const String tableExpenses = 'expenses';
 
   DatabaseHelper._privateConstructor();
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
@@ -31,16 +33,16 @@ class DatabaseHelper {
   }
 
   Future _onCreate(Database db, int version) async {
-    // 1. Traders Table (For Purchases)
+    // 1. Create Traders Table
     await db.execute('''
       CREATE TABLE $tableTraders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        category TEXT NOT NULL -- 'Broiler' or 'Desi'
+        category TEXT NOT NULL
       )
     ''');
 
-    // 2. Rates Table (Configurable Master Rates)
+    // 2. Create Rates Table
     await db.execute('''
       CREATE TABLE $tableRates (
         item_name TEXT PRIMARY KEY,
@@ -48,17 +50,16 @@ class DatabaseHelper {
       )
     ''');
 
-    // 3. Purchases Table
-    // We use nullable weight columns so one table handles Broiler, Desi, Eggs, and Pota Kalegi
+    // 3. Create Purchases Table
     await db.execute('''
       CREATE TABLE $tablePurchases (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        shop_code TEXT NOT NULL, -- 'NK', 'NP', 'PT'
-        item_type TEXT NOT NULL, -- 'Broiler', 'Desi', 'Eggs', 'Pota Kalegi'
+        shop_code TEXT NOT NULL,
+        item_type TEXT NOT NULL,
         date TEXT NOT NULL,
         quantity INTEGER NOT NULL,
-        weight_1 REAL, -- Small Chicken / DP Weight
-        weight_2 REAL, -- Big Chicken / OG Weight
+        weight_1 REAL,
+        weight_2 REAL,
         rate REAL NOT NULL,
         amount REAL NOT NULL,
         trader_id INTEGER,
@@ -66,27 +67,52 @@ class DatabaseHelper {
       )
     ''');
 
-    // 4. Sales Table (Daily/Weekly Entry)
+    // 4. Create Sales Table (including Mutton fields)
     await db.execute('''
       CREATE TABLE $tableSales (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         shop_code TEXT NOT NULL,
         date TEXT NOT NULL,
         broiler_wt REAL NOT NULL,
+        mutton_opening_wt REAL DEFAULT 0.0,
+        mutton_closing_wt REAL DEFAULT 0.0,
         mutton_wt REAL NOT NULL,
         dp_wt REAL NOT NULL,
         og_wt REAL NOT NULL,
         egg_qty INTEGER NOT NULL,
         pota_kaleji_wt REAL NOT NULL,
         selling_amount REAL NOT NULL,
-        total_amount REAL NOT NULL, -- Manually entered
-        difference REAL NOT NULL -- total_amount - selling_amount
+        total_amount REAL NOT NULL,
+        difference REAL NOT NULL
+      )
+    ''');
+
+    // 5. Create Stock Table
+    await db.execute('''
+      CREATE TABLE $tableStock (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        shop_code TEXT NOT NULL,
+        date TEXT NOT NULL,
+        item_type TEXT NOT NULL,
+        qty INTEGER NOT NULL,
+        weight_1 REAL NOT NULL,
+        weight_2 REAL NOT NULL
+      )
+    ''');
+
+    // 6. Create Expenses Table
+    await db.execute('''
+      CREATE TABLE $tableExpenses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        shop_code TEXT NOT NULL,
+        date TEXT NOT NULL,
+        category TEXT NOT NULL,
+        amount REAL NOT NULL,
+        notes TEXT
       )
     ''');
 
     // --- SEED INITIAL DATA ---
-    
-    // Seed Traders
     final batch = db.batch();
     batch.insert(tableTraders, {'name': 'Golden', 'category': 'Broiler'});
     batch.insert(tableTraders, {'name': 'Naim', 'category': 'Broiler'});
@@ -94,12 +120,11 @@ class DatabaseHelper {
     batch.insert(tableTraders, {'name': 'Arif', 'category': 'Desi'});
     batch.insert(tableTraders, {'name': 'Ansar', 'category': 'Desi'});
 
-    // Seed Fixed Rates
     batch.insert(tableRates, {'item_name': 'Broiler', 'rate': 180.0});
     batch.insert(tableRates, {'item_name': 'Mutton', 'rate': 280.0});
     batch.insert(tableRates, {'item_name': 'DP', 'rate': 260.0});
     batch.insert(tableRates, {'item_name': 'OG', 'rate': 530.0});
-    batch.insert(tableRates, {'item_name': 'Eggs', 'rate': 80.0}); // Per Dozen
+    batch.insert(tableRates, {'item_name': 'Eggs', 'rate': 80.0});
     batch.insert(tableRates, {'item_name': 'Pota Kalegi', 'rate': 200.0});
 
     await batch.commit();

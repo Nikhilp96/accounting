@@ -71,7 +71,12 @@ class SaleModel {
   final String shopCode;
   final String date;
   final double broilerWt;
-  final double muttonWt;
+
+  // --- NEW MUTTON FIELDS ---
+  final double muttonOpeningWt; // Yesterday's Unsold
+  final double muttonClosingWt; // Today's Unsold
+  final double muttonWt; // Raw Weight
+
   final double dpWt;
   final double ogWt;
   final int eggQty;
@@ -85,6 +90,8 @@ class SaleModel {
     required this.shopCode,
     required this.date,
     required this.broilerWt,
+    required this.muttonOpeningWt, // <-- Add this
+    required this.muttonClosingWt, // <-- Add this
     required this.muttonWt,
     required this.dpWt,
     required this.ogWt,
@@ -100,6 +107,8 @@ class SaleModel {
       'shop_code': shopCode,
       'date': date,
       'broiler_wt': broilerWt,
+      'mutton_opening_wt': muttonOpeningWt, // <-- Add this
+      'mutton_closing_wt': muttonClosingWt, // <-- Add this
       'mutton_wt': muttonWt,
       'dp_wt': dpWt,
       'og_wt': ogWt,
@@ -116,15 +125,103 @@ class SaleModel {
       id: map['id'],
       shopCode: map['shop_code'],
       date: map['date'],
-      broilerWt: map['broiler_wt'],
-      muttonWt: map['mutton_wt'],
-      dpWt: map['dp_wt'],
-      ogWt: map['og_wt'],
-      eggQty: map['egg_qty'],
-      potaKalejiWt: map['pota_kaleji_wt'],
-      sellingAmount: map['selling_amount'],
-      totalAmount: map['total_amount'],
-      difference: map['difference'],
+      broilerWt: map['broiler_wt'] ?? 0.0,
+      muttonOpeningWt:
+          map['mutton_opening_wt'] ?? 0.0, // <-- Add this (with fallback)
+      muttonClosingWt:
+          map['mutton_closing_wt'] ?? 0.0, // <-- Add this (with fallback)
+      muttonWt: map['mutton_wt'] ?? 0.0,
+      dpWt: map['dp_wt'] ?? 0.0,
+      ogWt: map['og_wt'] ?? 0.0,
+      eggQty: map['egg_qty'] ?? 0,
+      potaKalejiWt: map['pota_kaleji_wt'] ?? 0.0,
+      sellingAmount: map['selling_amount'] ?? 0.0,
+      totalAmount: map['total_amount'] ?? 0.0,
+      difference: map['difference'] ?? 0.0,
+    );
+  }
+}
+
+// --- NEW STOCK MODEL ---
+class StockModel {
+  final int? id;
+  final String shopCode;
+  final String date;
+  final String itemType;
+  final int qty;
+  final double weight1;
+  final double weight2;
+
+  StockModel({
+    this.id,
+    required this.shopCode,
+    required this.date,
+    required this.itemType,
+    required this.qty,
+    required this.weight1,
+    required this.weight2,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'shop_code': shopCode,
+      'date': date,
+      'item_type': itemType,
+      'qty': qty,
+      'weight_1': weight1,
+      'weight_2': weight2,
+    };
+  }
+
+  factory StockModel.fromMap(Map<String, dynamic> map) {
+    return StockModel(
+      id: map['id'],
+      shopCode: map['shop_code'],
+      date: map['date'],
+      itemType: map['item_type'],
+      qty: map['qty'],
+      weight1: map['weight_1'],
+      weight2: map['weight_2'],
+    );
+  }
+}
+
+class ExpenseModel {
+  final int? id;
+  final String shopCode;
+  final String date;
+  final String category; // 'चहा', 'नाश्ता', 'दाणा', 'पिशवी', 'पाणी', 'Light Bill', 'Waste Tax', 'Rent', 'Other'
+  final double amount;
+  final String notes;
+
+  ExpenseModel({
+    this.id,
+    required this.shopCode,
+    required this.date,
+    required this.category,
+    required this.amount,
+    required this.notes,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'shop_code': shopCode,
+      'date': date,
+      'category': category,
+      'amount': amount,
+      'notes': notes,
+    };
+  }
+
+  factory ExpenseModel.fromMap(Map<String, dynamic> map) {
+    return ExpenseModel(
+      id: map['id'],
+      shopCode: map['shop_code'],
+      date: map['date'],
+      category: map['category'],
+      amount: map['amount'],
+      notes: map['notes'] ?? '',
     );
   }
 }

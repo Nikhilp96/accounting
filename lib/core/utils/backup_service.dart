@@ -32,6 +32,7 @@ class BackupService {
     await _exportTableToSheet(db, excel, DatabaseHelper.tableRates);
     await _exportTableToSheet(db, excel, DatabaseHelper.tablePurchases);
     await _exportTableToSheet(db, excel, DatabaseHelper.tableSales);
+    await _exportTableToSheet(db, excel, DatabaseHelper.tableStock);
 
     // Remove the default 'Sheet1'
     if (excel.tables.keys.contains('Sheet1') && excel.tables.keys.length > 1) {
@@ -43,7 +44,7 @@ class BackupService {
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
-    
+
     final file = File('$_folderPath/$_fileName');
     await file.writeAsBytes(excel.save()!);
     print('Backup updated at: $_folderPath/$_fileName');
@@ -51,7 +52,11 @@ class BackupService {
     MediaScanner.loadMedia(path: file.path);
   }
 
-  static Future<void> _exportTableToSheet(db, Excel excel, String tableName) async {
+  static Future<void> _exportTableToSheet(
+    db,
+    Excel excel,
+    String tableName,
+  ) async {
     final List<Map<String, dynamic>> maps = await db.query(tableName);
     Sheet sheet = excel[tableName];
 
@@ -97,6 +102,7 @@ class BackupService {
         await _importSheetToTable(txn, excel, DatabaseHelper.tableRates);
         await _importSheetToTable(txn, excel, DatabaseHelper.tablePurchases);
         await _importSheetToTable(txn, excel, DatabaseHelper.tableSales);
+        await _importSheetToTable(txn, excel, DatabaseHelper.tableStock);
       });
       return true;
     } catch (e) {
@@ -105,9 +111,13 @@ class BackupService {
     }
   }
 
-  static Future<void> _importSheetToTable(txn, Excel excel, String tableName) async {
+  static Future<void> _importSheetToTable(
+    txn,
+    Excel excel,
+    String tableName,
+  ) async {
     if (!excel.tables.keys.contains(tableName)) return;
-    
+
     Sheet sheet = excel.tables[tableName]!;
     if (sheet.maxRows < 2) return; // No data, just headers or empty
 
@@ -115,7 +125,9 @@ class BackupService {
     await txn.delete(tableName);
 
     List<Data?> headersRow = sheet.rows[0];
-    List<String> headers = headersRow.map((e) => e?.value.toString() ?? '').toList();
+    List<String> headers = headersRow
+        .map((e) => e?.value.toString() ?? '')
+        .toList();
 
     for (int i = 1; i < sheet.maxRows; i++) {
       List<Data?> row = sheet.rows[i];
@@ -125,15 +137,19 @@ class BackupService {
         if (j < row.length && row[j] != null) {
           var val = row[j]!.value;
           // Clean up dynamic Excel types
-          if (val is IntCellValue) rowData[headers[j]] = val.value;
-          else if (val is DoubleCellValue) rowData[headers[j]] = val.value;
-          else if (val is TextCellValue) rowData[headers[j]] = val.value.toString();
-          else rowData[headers[j]] = val.toString();
+          if (val is IntCellValue)
+            rowData[headers[j]] = val.value;
+          else if (val is DoubleCellValue)
+            rowData[headers[j]] = val.value;
+          else if (val is TextCellValue)
+            rowData[headers[j]] = val.value.toString();
+          else
+            rowData[headers[j]] = val.toString();
         } else {
           rowData[headers[j]] = null;
         }
       }
-      
+
       // Do not re-insert the auto-increment ID if it is null or empty
       if (rowData['id'] == '' || rowData['id'] == 'null') {
         rowData.remove('id');

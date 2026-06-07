@@ -81,14 +81,9 @@ class PurchaseEntryController extends GetxController {
     weight1.value = 0.0;
     weight2.value = 0.0;
 
-    if (selectedItemType.value == 'Broiler' ||
-        selectedItemType.value == 'Desi') {
-      availableTraders.value = await _traderRepo.getTradersByCategory(
-        selectedItemType.value,
-      );
-    } else {
-      availableTraders.clear();
-    }
+    availableTraders.value = await _traderRepo.getTradersByCategory(
+      selectedItemType.value,
+    );
   }
 
   // --- Date Picker Logic ---

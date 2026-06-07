@@ -10,6 +10,7 @@ class DashboardPage extends GetView<DashboardController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text('My Shops Accounting'),
         backgroundColor: Colors.blueGrey.shade800,
@@ -22,18 +23,20 @@ class DashboardPage extends GetView<DashboardController> {
           ),
         ],
       ),
-      body: Container(
-        color: Colors.grey.shade100,
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildShopTile('Shop NK', 'NK', Colors.blueGrey),
-            const SizedBox(height: 20),
-            _buildShopTile('Shop NP', 'NP', Colors.teal),
-            const SizedBox(height: 20),
-            _buildShopTile('Shop PT', 'PT', Colors.indigo),
-          ],
+      body: SafeArea(
+        child: Container(
+          color: Colors.grey.shade100,
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildShopTile('Shop NK', 'NK', Colors.blueGrey),
+              const SizedBox(height: 20),
+              _buildShopTile('Shop NP', 'NP', Colors.teal),
+              const SizedBox(height: 20),
+              _buildShopTile('Shop PT', 'PT', Colors.indigo),
+            ],
+          ),
         ),
       ),
     );
