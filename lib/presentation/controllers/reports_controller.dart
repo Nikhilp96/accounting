@@ -1,4 +1,6 @@
+import 'package:accounting/core/utils/backup_service.dart';
 import 'package:accounting/core/utils/date_util.dart';
+import 'package:accounting/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/models/app_models.dart';
@@ -38,8 +40,9 @@ class ReportsController extends GetxController {
 
   DateTime get _startDate {
     DateTime d = selectedDate.value;
-    if (viewMode.value == 'Daily')
+    if (viewMode.value == 'Daily') {
       return DateTime(d.year, d.month, d.day, 0, 0, 0);
+    }
     return d
         .subtract(Duration(days: d.weekday - 1))
         .copyWith(hour: 0, minute: 0, second: 0);
@@ -47,8 +50,9 @@ class ReportsController extends GetxController {
 
   DateTime get _endDate {
     DateTime d = selectedDate.value;
-    if (viewMode.value == 'Daily')
+    if (viewMode.value == 'Daily') {
       return DateTime(d.year, d.month, d.day, 23, 59, 59);
+    }
     DateTime startOfWeek = d.subtract(Duration(days: d.weekday - 1));
     return startOfWeek.add(
       const Duration(days: 6, hours: 23, minutes: 59, seconds: 59),
@@ -145,7 +149,7 @@ class ReportsController extends GetxController {
       weight2: stockMap['Closing_${itemType}_Wt2'] ?? 0.0,
     );
     await _stockRepo.saveStock(closeStock);
-
+    await BackupService.exportToExcel();
     Get.snackbar(
       'Saved',
       '$itemType balances updated successfully.',
@@ -157,6 +161,7 @@ class ReportsController extends GetxController {
   // --- Deletes & Edits ---
   Future<void> deletePurchaseRecord(int id) async {
     await _purchaseRepo.deletePurchase(id);
+    await BackupService.exportToExcel();
     fetchData();
     Get.snackbar(
       'Deleted',
@@ -168,6 +173,7 @@ class ReportsController extends GetxController {
 
   Future<void> deleteSalesRecord(int id) async {
     await _salesRepo.deleteSale(id);
+    await BackupService.exportToExcel();
     fetchData();
     Get.snackbar(
       'Deleted',
@@ -299,5 +305,28 @@ class ReportsController extends GetxController {
     }
 
     return payables;
+  }
+
+  Future<void> deleteExpenseRecord(int id) async {
+    await _expenseRepo.deleteExpense(id);
+    await BackupService.exportToExcel();
+    fetchData();
+    Get.snackbar(
+      'Deleted',
+      'Expense record removed.',
+      backgroundColor: Colors.red.shade700,
+      colorText: Colors.white,
+    );
+  }
+
+  void editExpense(ExpenseModel expense) {
+    // Assuming you registered the route in app_routes.dart as '/expense-entry'.
+    // If not, you can use: Get.to(() => const ExpenseEntryPage(), arguments: {'shopCode': shopCode, 'expense': expense})?.then((_) { fetchData(); });
+    Get.toNamed(
+      Routes.EXPENSE_ENTRY, // Adjust to your actual route name if different
+      arguments: {'shopCode': shopCode, 'expense': expense},
+    )?.then((_) {
+      fetchData();
+    });
   }
 }

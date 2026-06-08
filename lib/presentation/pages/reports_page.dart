@@ -33,6 +33,7 @@ class ReportsPage extends StatelessWidget {
                   children: [
                     Expanded(child: _buildTabButton('Purchases', controller)),
                     Expanded(child: _buildTabButton('Sales', controller)),
+                    Expanded(child: _buildTabButton('Expenses', controller)),
                   ],
                 ),
               ),
@@ -45,19 +46,31 @@ class ReportsPage extends StatelessWidget {
 
                 if (controller.activeTab.value == 'Purchases') {
                   if (controller.purchasesList.isEmpty) {
-                    return const Center(
-                      child: Text('No purchases in this period.'),
+                    return const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Center(
+                        child: Text('No purchases in this period.'),
+                      ),
                     );
                   }
-                  // Call the new Multi-Table View
                   return _buildPurchasesView(controller.purchasesList);
-                } else {
+                } else if (controller.activeTab.value == 'Sales') {
                   if (controller.salesList.isEmpty) {
-                    return const Center(
-                      child: Text('No sales in this period.'),
+                    return const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Center(child: Text('No sales in this period.')),
                     );
                   }
                   return _buildSalesTable(controller.salesList);
+                } else {
+                  // --- EXPENSES TAB LOGIC ---
+                  if (controller.expensesList.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Center(child: Text('No expenses in this period.')),
+                    );
+                  }
+                  return _buildExpensesTable(controller.expensesList);
                 }
               }),
             ],
@@ -355,7 +368,7 @@ class ReportsPage extends StatelessWidget {
     }).toList();
 
     // 2. Calculate Purchase Totals
-    int totalQty = data.fold(0, (sum, item) => sum + item.quantity);
+    double totalQty = data.fold(0.0, (sum, item) => sum + item.quantity);
     double totalWt1 = isBird
         ? data.fold(0.0, (sum, item) => sum + (item.weight1 ?? 0.0))
         : 0.0;
@@ -374,7 +387,7 @@ class ReportsPage extends StatelessWidget {
       const DataCell(Text('-')),
       DataCell(
         Text(
-          '$totalQty',
+          totalQty.toStringAsFixed(2),
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
         ),
       ),
@@ -428,7 +441,7 @@ class ReportsPage extends StatelessWidget {
         ),
       ),
       const DataCell(Text('-')),
-      _buildStockInputCell(controller, 'Opening', title, 'Qty', isInt: true),
+      _buildStockInputCell(controller, 'Opening', title, 'Qty'),
     ];
     if (isBird) {
       openCells.addAll([
@@ -460,7 +473,7 @@ class ReportsPage extends StatelessWidget {
         ),
       ),
       const DataCell(Text('-')),
-      _buildStockInputCell(controller, 'Closing', title, 'Qty', isInt: true),
+      _buildStockInputCell(controller, 'Closing', title, 'Qty'),
     ];
     if (isBird) {
       closeCells.addAll([
@@ -503,7 +516,10 @@ class ReportsPage extends StatelessWidget {
       DataCell(
         Obx(
           () => Text(
-            '${totalQty + (controller.stockMap['Opening_${title}_Qty'] ?? 0) - (controller.stockMap['Closing_${title}_Qty'] ?? 0)}',
+            (totalQty +
+                    (controller.stockMap['Opening_${title}_Qty'] ?? 0.0) -
+                    (controller.stockMap['Closing_${title}_Qty'] ?? 0.0))
+                .toStringAsFixed(2),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
         ),
@@ -1096,6 +1112,82 @@ class ReportsPage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+  
+ // --- EXPENSES DATATABLE ---
+  Widget _buildExpensesTable(List<ExpenseModel> data) {
+    // 1. Map rows
+    List<DataRow> rows = data.map((expense) {
+      return DataRow(
+        cells: [
+          DataCell(Text(DateUtil.formatIso(expense.date))),
+          DataCell(Text(expense.category, style: const TextStyle(fontWeight: FontWeight.w600))),
+          DataCell(Text(expense.notes.isNotEmpty ? expense.notes : '-')),
+          DataCell(
+            Text(
+              '₹${expense.amount.toStringAsFixed(2)}',
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+            ),
+          ),
+          DataCell(
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
+                  onPressed: () => Get.find<ReportsController>().editExpense(expense),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                  onPressed: () => _confirmDelete(
+                    Get.context!,
+                    () => Get.find<ReportsController>().deleteExpenseRecord(expense.id!),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }).toList();
+
+    // 2. Calculate Total
+    double totalAmt = data.fold(0.0, (sum, item) => sum + item.amount);
+
+    // 3. Append Total Row
+    rows.add(
+      DataRow(
+        color: MaterialStateProperty.all(Colors.orange.shade50),
+        cells: [
+          const DataCell(Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+          const DataCell(Text('-')),
+          const DataCell(Text('-')),
+          DataCell(
+            Text(
+              '₹${totalAmt.toStringAsFixed(2)}',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.orange.shade900),
+            ),
+          ),
+          const DataCell(Text('-')),
+        ],
+      ),
+    );
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        headingRowColor: MaterialStateProperty.all(Colors.orange.shade100),
+        columnSpacing: 20,
+        columns: const [
+          DataColumn(label: Text('Date', style: TextStyle(fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Category', style: TextStyle(fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Notes', style: TextStyle(fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Amount', style: TextStyle(fontWeight: FontWeight.bold))),
+          DataColumn(label: Text('Action', style: TextStyle(fontWeight: FontWeight.bold))),
+        ],
+        rows: rows,
       ),
     );
   }

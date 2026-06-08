@@ -1,4 +1,5 @@
 import 'package:accounting/presentation/pages/dashboard_page.dart';
+import 'package:accounting/presentation/pages/expense_entry_page.dart';
 import 'package:accounting/presentation/pages/purchase_entry_page.dart';
 import 'package:accounting/presentation/pages/reports_page.dart';
 import 'package:accounting/presentation/pages/sales_entry_page.dart';
@@ -18,5 +19,6 @@ class AppPages {
     GetPage(name: Routes.PURCHASE_ENTRY, page: () => const PurchaseEntryPage()),
     GetPage(name: Routes.SALES_ENTRY, page: () => const SalesEntryPage()),
     GetPage(name: Routes.REPORTS, page: () => const ReportsPage()),
+    GetPage(name: Routes.EXPENSE_ENTRY, page: () => const ExpenseEntryPage()),
   ];
 }

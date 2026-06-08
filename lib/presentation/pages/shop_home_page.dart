@@ -57,6 +57,20 @@ class ShopHomePage extends StatelessWidget {
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.all(20),
+                  backgroundColor: Colors.orange.shade100,
+                ),
+                icon: const Icon(Icons.money_off, size: 30),
+                label: const Text(
+                  'Add Expense',
+                  style: TextStyle(fontSize: 20),
+                ),
+                onPressed: () =>
+                    Get.toNamed(Routes.EXPENSE_ENTRY, arguments: shopCode),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.all(20),
                   backgroundColor: Colors.grey.shade300,
                 ),
                 icon: const Icon(Icons.receipt_long, size: 30),
@@ -69,19 +83,6 @@ class ShopHomePage extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 20),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.all(20),
-                  backgroundColor: Colors.orange.shade100,
-                ),
-                icon: const Icon(Icons.money_off, size: 30),
-                label: const Text(
-                  'Add Expense',
-                  style: TextStyle(fontSize: 20),
-                ),
-                onPressed: () =>
-                    Get.to(() => const ExpenseEntryPage(), arguments: shopCode),
-              ),
             ],
           ),
         ),

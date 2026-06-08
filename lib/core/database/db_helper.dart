@@ -1,9 +1,11 @@
+import 'dart:async';
+
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
 class DatabaseHelper {
   static const String _databaseName = "shop_accounting.db";
-  static const int _databaseVersion = 1;
+  static const int _databaseVersion = 2;
 
   // Table Names
   static const String tableTraders = 'traders';
@@ -29,6 +31,7 @@ class DatabaseHelper {
       path,
       version: _databaseVersion,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -57,7 +60,7 @@ class DatabaseHelper {
         shop_code TEXT NOT NULL,
         item_type TEXT NOT NULL,
         date TEXT NOT NULL,
-        quantity INTEGER NOT NULL,
+        quantity REAL NOT NULL, -- Changed from INTEGER to REAL
         weight_1 REAL,
         weight_2 REAL,
         rate REAL NOT NULL,
@@ -94,7 +97,7 @@ class DatabaseHelper {
         shop_code TEXT NOT NULL,
         date TEXT NOT NULL,
         item_type TEXT NOT NULL,
-        qty INTEGER NOT NULL,
+       qty REAL NOT NULL, -- Changed from INTEGER to REAL
         weight_1 REAL NOT NULL,
         weight_2 REAL NOT NULL
       )
@@ -128,5 +131,40 @@ class DatabaseHelper {
     batch.insert(tableRates, {'item_name': 'Pota Kalegi', 'rate': 200.0});
 
     await batch.commit();
+  }
+
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Turn off foreign keys temporarily for safe table replacement
+      await db.execute('PRAGMA foreign_keys=off;');
+
+      // Migrate Purchases Table
+      await db.execute('''
+        CREATE TABLE purchases_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT, shop_code TEXT NOT NULL, item_type TEXT NOT NULL,
+          date TEXT NOT NULL, quantity REAL NOT NULL, weight_1 REAL, weight_2 REAL,
+          rate REAL NOT NULL, amount REAL NOT NULL, trader_id INTEGER,
+          FOREIGN KEY (trader_id) REFERENCES $tableTraders (id)
+        )
+      ''');
+      await db.execute(
+        'INSERT INTO purchases_new SELECT * FROM $tablePurchases',
+      );
+      await db.execute('DROP TABLE $tablePurchases');
+      await db.execute('ALTER TABLE purchases_new RENAME TO $tablePurchases');
+
+      // Migrate Stock Table
+      await db.execute('''
+        CREATE TABLE stock_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT, shop_code TEXT NOT NULL, date TEXT NOT NULL,
+          item_type TEXT NOT NULL, qty REAL NOT NULL, weight_1 REAL NOT NULL, weight_2 REAL NOT NULL
+        )
+      ''');
+      await db.execute('INSERT INTO stock_new SELECT * FROM $tableStock');
+      await db.execute('DROP TABLE $tableStock');
+      await db.execute('ALTER TABLE stock_new RENAME TO $tableStock');
+
+      await db.execute('PRAGMA foreign_keys=on;');
+    }
   }
 }

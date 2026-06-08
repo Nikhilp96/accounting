@@ -1,3 +1,4 @@
+import 'package:accounting/core/utils/backup_service.dart';
 import 'package:accounting/core/utils/date_util.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -126,20 +127,34 @@ class SalesEntryController extends GetxController {
 
       muttonOpeningWt.value = editData!.muttonOpeningWt;
       muttonClosingWt.value = editData!.muttonClosingWt;
-      if (muttonOpeningWt.value > 0)
+      if (muttonOpeningWt.value > 0) {
         wtMuttonOpeningCtrl.text = muttonOpeningWt.value.toString();
-      if (muttonClosingWt.value > 0)
+      }
+      if (muttonClosingWt.value > 0) {
         wtMuttonClosingCtrl.text = muttonClosingWt.value.toString();
+      }
 
-      if (broilerWt.value > 0) wtBroilerCtrl.text = broilerWt.value.toString();
-      if (muttonWt.value > 0) wtMuttonCtrl.text = muttonWt.value.toString();
-      if (dpWt.value > 0) wtDPCtrl.text = dpWt.value.toString();
-      if (ogWt.value > 0) wtOGCtrl.text = ogWt.value.toString();
-      if (eggQty.value > 0) qtyEggsCtrl.text = eggQty.value.toString();
-      if (potaKalejiWt.value > 0)
+      if (broilerWt.value > 0) {
+        wtBroilerCtrl.text = broilerWt.value.toString();
+      }
+      if (muttonWt.value > 0) {
+        wtMuttonCtrl.text = muttonWt.value.toString();
+      }
+      if (dpWt.value > 0) {
+        wtDPCtrl.text = dpWt.value.toString();
+      }
+      if (ogWt.value > 0) {
+        wtOGCtrl.text = ogWt.value.toString();
+      }
+      if (eggQty.value > 0) {
+        qtyEggsCtrl.text = eggQty.value.toString();
+      }
+      if (potaKalejiWt.value > 0) {
         wtPotaCtrl.text = potaKalejiWt.value.toString();
-      if (userTotalAmount.value > 0)
+      }
+      if (userTotalAmount.value > 0) {
         totalAmountCtrl.text = userTotalAmount.value.toString();
+      }
     }
   }
 
@@ -193,9 +208,11 @@ class SalesEntryController extends GetxController {
 
     if (editData != null) {
       await _salesRepo.updateSale(sale);
+      await BackupService.exportToExcel();
       Get.back();
     } else {
       await _salesRepo.addSale(sale);
+      await BackupService.exportToExcel();
     }
 
     Get.snackbar(

@@ -1,4 +1,4 @@
-import 'package:accounting/core/utils/date_util.dart';
+import 'package:accounting/core/utils/backup_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/models/app_models.dart';
@@ -27,7 +27,7 @@ class PurchaseEntryController extends GetxController {
 
   // Form Inputs
   var date = DateTime.now().obs;
-  var quantity = 0.obs;
+  var quantity = 0.0.obs;
   var weight1 = 0.0.obs; // Small Chicken OR DP Weight
   var weight2 = 0.0.obs; // Big Chicken OR OG Weight
   var rate = 0.0.obs;
@@ -57,11 +57,18 @@ class PurchaseEntryController extends GetxController {
       rate.value = editData!.rate;
       selectedTraderId.value = editData!.traderId;
 
-      if (quantity.value > 0)
+      if (quantity.value > 0) {
         quantityController.text = quantity.value.toString();
-      if (rate.value > 0) rateController.text = rate.value.toString();
-      if (weight1.value > 0) weight1Controller.text = weight1.value.toString();
-      if (weight2.value > 0) weight2Controller.text = weight2.value.toString();
+      }
+      if (rate.value > 0) {
+        rateController.text = rate.value.toString();
+      }
+      if (weight1.value > 0) {
+        weight1Controller.text = weight1.value.toString();
+      }
+      if (weight2.value > 0) {
+        weight2Controller.text = weight2.value.toString();
+      }
     }
   }
 
@@ -182,9 +189,11 @@ class PurchaseEntryController extends GetxController {
 
     if (editData != null) {
       await _purchaseRepo.updatePurchase(purchase);
+      await BackupService.exportToExcel();
       Get.back(); // Return to reports instantly after editing
     } else {
       await _purchaseRepo.addPurchase(purchase);
+      await BackupService.exportToExcel();
       Get.snackbar(
         'Success',
         'Purchase saved.',
@@ -192,7 +201,7 @@ class PurchaseEntryController extends GetxController {
         colorText: Colors.white,
       );
       // Reset logic...
-      quantity.value = 0;
+      quantity.value = 0.0;
       rate.value = 0.0;
       weight1.value = 0.0;
       weight2.value = 0.0;

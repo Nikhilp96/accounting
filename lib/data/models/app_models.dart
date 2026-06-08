@@ -16,7 +16,7 @@ class PurchaseModel {
   final String shopCode;
   final String itemType;
   final String date;
-  final int quantity;
+  final double quantity;
   final double? weight1;
   final double? weight2;
   final double rate;
@@ -56,7 +56,7 @@ class PurchaseModel {
       shopCode: map['shop_code'],
       itemType: map['item_type'],
       date: map['date'],
-      quantity: map['quantity'],
+      quantity: (map['quantity'] ?? 0).toDouble(),
       weight1: map['weight_1'],
       weight2: map['weight_2'],
       rate: map['rate'],
@@ -148,7 +148,7 @@ class StockModel {
   final String shopCode;
   final String date;
   final String itemType;
-  final int qty;
+  final double qty;
   final double weight1;
   final double weight2;
 
@@ -180,7 +180,7 @@ class StockModel {
       shopCode: map['shop_code'],
       date: map['date'],
       itemType: map['item_type'],
-      qty: map['qty'],
+      qty: (map['qty'] ?? 0).toDouble(),
       weight1: map['weight_1'],
       weight2: map['weight_2'],
     );
@@ -191,7 +191,8 @@ class ExpenseModel {
   final int? id;
   final String shopCode;
   final String date;
-  final String category; // 'चहा', 'नाश्ता', 'दाणा', 'पिशवी', 'पाणी', 'Light Bill', 'Waste Tax', 'Rent', 'Other'
+  final String
+  category; // 'चहा', 'नाश्ता', 'दाणा', 'पिशवी', 'पाणी', 'Light Bill', 'Waste Tax', 'Rent', 'Other'
   final double amount;
   final String notes;
 

@@ -81,9 +81,11 @@ class PurchaseEntryPage extends StatelessWidget {
                         labelText: 'Quantity',
                         border: OutlineInputBorder(),
                       ),
-                      keyboardType: TextInputType.number,
-                      onChanged: (val) =>
-                          controller.quantity.value = int.tryParse(val) ?? 0,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      onChanged: (val) => controller.quantity.value =
+                          double.tryParse(val) ?? 0.0,
                     ),
                   ),
                   const SizedBox(width: 16),

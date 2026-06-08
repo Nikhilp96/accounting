@@ -1,5 +1,7 @@
 import 'package:excel/excel.dart';
+import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:sqflite/sqflite.dart';
 import 'dart:io';
 import 'package:media_scanner/media_scanner.dart';
 import '../database/db_helper.dart';
@@ -47,13 +49,13 @@ class BackupService {
 
     final file = File('$_folderPath/$_fileName');
     await file.writeAsBytes(excel.save()!);
-    print('Backup updated at: $_folderPath/$_fileName');
+    debugPrint('Backup updated at: $_folderPath/$_fileName');
 
     MediaScanner.loadMedia(path: file.path);
   }
 
   static Future<void> _exportTableToSheet(
-    db,
+    Database db,
     Excel excel,
     String tableName,
   ) async {
@@ -106,13 +108,13 @@ class BackupService {
       });
       return true;
     } catch (e) {
-      print('Restore failed: $e');
+      debugPrint('Restore failed: $e');
       return false;
     }
   }
 
   static Future<void> _importSheetToTable(
-    txn,
+    Transaction txn,
     Excel excel,
     String tableName,
   ) async {
@@ -137,14 +139,15 @@ class BackupService {
         if (j < row.length && row[j] != null) {
           var val = row[j]!.value;
           // Clean up dynamic Excel types
-          if (val is IntCellValue)
+          if (val is IntCellValue) {
             rowData[headers[j]] = val.value;
-          else if (val is DoubleCellValue)
+          } else if (val is DoubleCellValue) {
             rowData[headers[j]] = val.value;
-          else if (val is TextCellValue)
+          } else if (val is TextCellValue) {
             rowData[headers[j]] = val.value.toString();
-          else
+          } else {
             rowData[headers[j]] = val.toString();
+          }
         } else {
           rowData[headers[j]] = null;
         }

@@ -24,11 +24,13 @@ class SettingsController extends GetxController {
 
   Future<void> updateRate(String itemName, double newRate) async {
     await _rateRepo.updateRate(itemName, newRate);
+    await BackupService.exportToExcel();
     loadData();
   }
 
   Future<void> addTrader(String name, String category) async {
     await _traderRepo.addTrader(TraderModel(name: name, category: category));
+    await BackupService.exportToExcel();
     loadData();
   }
 
@@ -36,27 +38,27 @@ class SettingsController extends GetxController {
 
   Future<void> triggerRestore() async {
     isRestoring.value = true;
-    
+
     bool success = await BackupService.restoreFromExcel();
-    
+
     if (success) {
       // Reload UI data to reflect the restored database
-      await loadData(); 
+      await loadData();
       Get.snackbar(
-        'Restore Successful', 
+        'Restore Successful',
         'Database has been rebuilt from the Excel file.',
         backgroundColor: Colors.green.shade700,
         colorText: Colors.white,
       );
     } else {
       Get.snackbar(
-        'Restore Failed', 
+        'Restore Failed',
         'Could not find backup.xlsx or permission denied.',
         backgroundColor: Colors.red.shade800,
         colorText: Colors.white,
       );
     }
-    
+
     isRestoring.value = false;
   }
 }

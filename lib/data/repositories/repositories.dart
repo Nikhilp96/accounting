@@ -1,7 +1,5 @@
-import 'package:sqflite/sqflite.dart';
 import '../../core/database/db_helper.dart';
 import '../models/app_models.dart';
-import '../../core/utils/backup_service.dart';
 
 class RateRepository {
   final DatabaseHelper dbHelper = DatabaseHelper.instance;
@@ -24,7 +22,6 @@ class RateRepository {
       where: 'item_name = ?',
       whereArgs: [itemName],
     );
-    BackupService.exportToExcel();
     return id;
   }
 }
@@ -70,7 +67,6 @@ class TraderRepository {
       'name': trader.name,
       'category': trader.category,
     });
-    BackupService.exportToExcel();
     return id;
   }
 }
@@ -81,10 +77,6 @@ class PurchaseRepository {
   Future<int> addPurchase(PurchaseModel purchase) async {
     final db = await dbHelper.database;
     int id = await db.insert(DatabaseHelper.tablePurchases, purchase.toMap());
-
-    // Trigger background backup
-    BackupService.exportToExcel();
-
     return id;
   }
 
@@ -96,7 +88,6 @@ class PurchaseRepository {
       where: 'id = ?',
       whereArgs: [purchase.id],
     );
-    BackupService.exportToExcel(); // Sync to Excel
     return result;
   }
 
@@ -107,7 +98,6 @@ class PurchaseRepository {
       where: 'id = ?',
       whereArgs: [id],
     );
-    BackupService.exportToExcel(); // Sync to Excel
     return result;
   }
 
@@ -133,10 +123,6 @@ class SalesRepository {
   Future<int> addSale(SaleModel sale) async {
     final db = await dbHelper.database;
     int id = await db.insert(DatabaseHelper.tableSales, sale.toMap());
-
-    // Trigger background backup
-    BackupService.exportToExcel();
-
     return id;
   }
 
@@ -148,7 +134,6 @@ class SalesRepository {
       where: 'id = ?',
       whereArgs: [sale.id],
     );
-    BackupService.exportToExcel(); // Sync to Excel
     return result;
   }
 
@@ -159,7 +144,6 @@ class SalesRepository {
       where: 'id = ?',
       whereArgs: [id],
     );
-    BackupService.exportToExcel(); // Sync to Excel
     return result;
   }
 
@@ -222,7 +206,6 @@ class StockRepository {
 
       await db.insert(DatabaseHelper.tableStock, insertData);
     }
-    BackupService.exportToExcel();
   }
 }
 
@@ -232,7 +215,6 @@ class ExpenseRepository {
   Future<int> addExpense(ExpenseModel expense) async {
     final db = await dbHelper.database;
     int id = await db.insert(DatabaseHelper.tableExpenses, expense.toMap());
-    BackupService.exportToExcel();
     return id;
   }
 
@@ -248,5 +230,24 @@ class ExpenseRepository {
       whereArgs: [shopCode, start, end],
     );
     return maps.map((e) => ExpenseModel.fromMap(e)).toList();
+  }
+
+  Future<int> updateExpense(ExpenseModel expense) async {
+    final db = await dbHelper.database;
+    return await db.update(
+      DatabaseHelper.tableExpenses,
+      expense.toMap(),
+      where: 'id = ?',
+      whereArgs: [expense.id],
+    );
+  }
+
+  Future<int> deleteExpense(int id) async {
+    final db = await dbHelper.database;
+    return await db.delete(
+      DatabaseHelper.tableExpenses,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 }
