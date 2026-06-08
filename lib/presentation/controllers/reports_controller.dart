@@ -3,6 +3,8 @@ import 'package:accounting/core/utils/date_util.dart';
 import 'package:accounting/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:accounting/core/utils/report_export_service.dart';
+import 'dart:io';
 import '../../data/models/app_models.dart';
 import '../../data/repositories/repositories.dart';
 
@@ -328,5 +330,43 @@ class ReportsController extends GetxController {
     )?.then((_) {
       fetchData();
     });
+  }
+
+  Future<void> exportReportToExcel() async {
+    try {
+      String savedPath = await ReportExportService.exportReport(
+        shopCode: shopCode,
+        startDate: _startDate,
+        endDate: _endDate,
+        purchases: purchasesList,
+        sales: salesList,
+        expenses: expensesList,
+        traderPayables: traderPayables,
+        birdsEyeView: birdsEyeView,
+        totalCollected: totalCollectedSales,
+        totalPurchases: totalPurchases,
+        totalExpenses: totalWeeklyExpenses,
+        netPosition: netPosition,
+      );
+
+      Get.snackbar(
+        'Export Successful',
+        'Saved to: $savedPath',
+        backgroundColor: Colors.green.shade700,
+        colorText: Colors.white,
+        duration: const Duration(
+          seconds: 4,
+        ), // Longer duration to read the path
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Export Failed',
+        e.toString(),
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 }
