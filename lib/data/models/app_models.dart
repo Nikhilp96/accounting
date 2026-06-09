@@ -226,3 +226,43 @@ class ExpenseModel {
     );
   }
 }
+
+class TraderPaymentModel {
+  final int? id;
+  final int? traderId;
+  final String itemType; // Fallback category if trader is null
+  final String date;
+  final double amount;
+  final String notes;
+
+  TraderPaymentModel({
+    this.id,
+    this.traderId,
+    required this.itemType,
+    required this.date,
+    required this.amount,
+    required this.notes,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'trader_id': traderId,
+      'item_type': itemType,
+      'date': date,
+      'amount': amount,
+      'notes': notes,
+    };
+  }
+
+  factory TraderPaymentModel.fromMap(Map<String, dynamic> map) {
+    return TraderPaymentModel(
+      id: map['id'],
+      traderId: map['trader_id'],
+      itemType: map['item_type'],
+      date: map['date'],
+      amount: map['amount'],
+      notes: map['notes'] ?? '',
+    );
+  }
+}

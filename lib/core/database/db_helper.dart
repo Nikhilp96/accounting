@@ -5,7 +5,7 @@ import 'package:path/path.dart';
 
 class DatabaseHelper {
   static const String _databaseName = "shop_accounting.db";
-  static const int _databaseVersion = 2;
+  static const int _databaseVersion = 3;
 
   // Table Names
   static const String tableTraders = 'traders';
@@ -14,6 +14,7 @@ class DatabaseHelper {
   static const String tableSales = 'sales';
   static const String tableStock = 'stock';
   static const String tableExpenses = 'expenses';
+  static const String tableTraderPayments = 'trader_payments';
 
   DatabaseHelper._privateConstructor();
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
@@ -115,6 +116,18 @@ class DatabaseHelper {
       )
     ''');
 
+    await db.execute('''
+      CREATE TABLE $tableTraderPayments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trader_id INTEGER,
+        item_type TEXT NOT NULL,
+        date TEXT NOT NULL,
+        amount REAL NOT NULL,
+        notes TEXT,
+        FOREIGN KEY (trader_id) REFERENCES $tableTraders (id)
+      )
+    ''');
+
     // --- SEED INITIAL DATA ---
     final batch = db.batch();
     batch.insert(tableTraders, {'name': 'Golden', 'category': 'Broiler'});
@@ -165,6 +178,20 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE stock_new RENAME TO $tableStock');
 
       await db.execute('PRAGMA foreign_keys=on;');
+    }
+
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE $tableTraderPayments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          trader_id INTEGER,
+          item_type TEXT NOT NULL,
+          date TEXT NOT NULL,
+          amount REAL NOT NULL,
+          notes TEXT,
+          FOREIGN KEY (trader_id) REFERENCES $tableTraders (id)
+        )
+      ''');
     }
   }
 }

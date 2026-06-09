@@ -76,25 +76,28 @@ class ReportsPage extends StatelessWidget {
                 }
 
                 if (controller.activeTab.value == 'Purchases') {
-                  if (controller.purchasesList.isEmpty)
+                  if (controller.purchasesList.isEmpty) {
                     return _buildEmptyState(
                       'No purchases in this period.',
                       Icons.shopping_cart_outlined,
                     );
+                  }
                   return _buildPurchasesView(controller.purchasesList);
                 } else if (controller.activeTab.value == 'Sales') {
-                  if (controller.salesList.isEmpty)
+                  if (controller.salesList.isEmpty) {
                     return _buildEmptyState(
                       'No sales in this period.',
                       Icons.point_of_sale_outlined,
                     );
+                  }
                   return _buildSalesTable(controller.salesList);
                 } else {
-                  if (controller.expensesList.isEmpty)
+                  if (controller.expensesList.isEmpty) {
                     return _buildEmptyState(
                       'No expenses in this period.',
                       Icons.money_off_outlined,
                     );
+                  }
                   return _buildExpensesTable(controller.expensesList);
                 }
               }),
@@ -1321,7 +1324,6 @@ class ReportsPage extends StatelessWidget {
               ),
             ),
           ),
-          DataCell(Text(expense.notes.isNotEmpty ? expense.notes : '-')),
           DataCell(
             Text(
               '₹${expense.amount.toStringAsFixed(2)}',
@@ -1378,7 +1380,7 @@ class ReportsPage extends StatelessWidget {
             ),
           ),
           const DataCell(Text('-')),
-          const DataCell(Text('-')),
+          // Removed the extra blank DataCell for Notes
           DataCell(
             Text(
               '₹${totalAmt.toStringAsFixed(2)}',
@@ -1428,12 +1430,7 @@ class ReportsPage extends StatelessWidget {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            DataColumn(
-              label: Text(
-                'Notes',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
+            // Removed the Notes DataColumn
             DataColumn(
               label: Text(
                 'Amount',

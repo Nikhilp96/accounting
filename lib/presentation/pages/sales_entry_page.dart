@@ -9,179 +9,403 @@ class SalesEntryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.put(SalesEntryController());
+    final bool isEdit = controller.editData != null;
 
     return Scaffold(
+      backgroundColor: Colors.grey.shade100, // Modern soft background
       appBar: AppBar(
-        title: Text('Weekly Sales - Shop ${controller.shopCode}'),
-        backgroundColor: Colors.indigo,
+        title: Text(
+          isEdit ? 'Edit Weekly Sales' : 'Weekly Sales',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.indigo.shade800,
         foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // --- Date Picker UI ---
-            InkWell(
-              onTap: () => controller.pickDate(context),
-              child: Container(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // --- Header Info ---
+              Padding(
                 padding: const EdgeInsets.symmetric(
-                  vertical: 16,
-                  horizontal: 12,
+                  horizontal: 8.0,
+                  vertical: 8.0,
                 ),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(4),
+                child: Text(
+                  'SHOP ${controller.shopCode.toUpperCase()}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade600,
+                    letterSpacing: 1.2,
+                  ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Obx(
-                      () => Text(
-                        'Date: ${DateUtil.format(controller.date.value)}',
-                        style: const TextStyle(fontSize: 16),
-                      ),
+              ),
+
+              // --- Context Card (Date Picker) ---
+              _buildCard(
+                child: InkWell(
+                  onTap: () => controller.pickDate(context),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 16,
                     ),
-                    const Icon(Icons.calendar_today, color: Colors.indigo),
+                    decoration: BoxDecoration(
+                      color: Colors.indigo.shade50,
+                      border: Border.all(color: Colors.indigo.shade200),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_month,
+                              color: Colors.indigo.shade700,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 12),
+                            Obx(
+                              () => Text(
+                                DateUtil.format(controller.date.value),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.indigo.shade900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Icon(
+                          Icons.edit_calendar,
+                          color: Colors.indigo.shade700,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // --- Poultry & Others Card ---
+              _buildCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionHeader(
+                      'POULTRY & OTHERS',
+                      Icons.set_meal_outlined,
+                      Colors.indigo,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildWeightField(
+                      'Broiler (kg)',
+                      controller.broilerWt,
+                      controller.rateBroiler,
+                      controller.wtBroilerCtrl,
+                      controller.rateBroilerCtrl,
+                    ),
+                    _buildWeightField(
+                      'Desi DP (kg)',
+                      controller.dpWt,
+                      controller.rateDP,
+                      controller.wtDPCtrl,
+                      controller.rateDPCtrl,
+                    ),
+                    _buildWeightField(
+                      'Desi OG (kg)',
+                      controller.ogWt,
+                      controller.rateOG,
+                      controller.wtOGCtrl,
+                      controller.rateOGCtrl,
+                    ),
+                    _buildWeightField(
+                      'Pota Kalegi (kg)',
+                      controller.potaKalejiWt,
+                      controller.ratePotaKaleji,
+                      controller.wtPotaCtrl,
+                      controller.ratePotaCtrl,
+                    ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            const Text(
-              'Enter Sold Quantities & Rates',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const Divider(),
+              // --- Mutton Card ---
+              _buildCard(child: _buildMuttonSection(controller)),
+              const SizedBox(height: 16),
 
-            // --- Dynamically Calculating Fields ---
-            _buildWeightField(
-              'Broiler Wt (kg)',
-              controller.broilerWt,
-              controller.rateBroiler,
-              controller.wtBroilerCtrl,
-              controller.rateBroilerCtrl,
-            ),
-            _buildMuttonSection(controller),
-            _buildWeightField(
-              'Desi DP Wt (kg)',
-              controller.dpWt,
-              controller.rateDP,
-              controller.wtDPCtrl,
-              controller.rateDPCtrl,
-            ),
-            _buildWeightField(
-              'Desi OG Wt (kg)',
-              controller.ogWt,
-              controller.rateOG,
-              controller.wtOGCtrl,
-              controller.rateOGCtrl,
-            ),
-            _buildWeightField(
-              'Pota Kalegi Wt (kg)',
-              controller.potaKalejiWt,
-              controller.ratePotaKaleji,
-              controller.wtPotaCtrl,
-              controller.ratePotaCtrl,
-            ),
-
-            _buildEggField(
-              'Eggs (Pieces)',
-              controller.eggQty,
-              controller.rateEggsDozen,
-              controller.qtyEggsCtrl,
-              controller.rateEggsCtrl,
-            ),
-
-            const SizedBox(height: 10),
-            const Text(
-              'Reconciliation',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const Divider(),
-
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: TextField(
-                controller: controller.totalAmountCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Total Amount Collected (₹)',
-                  border: OutlineInputBorder(),
-                  filled: true,
-                  fillColor: Colors.yellowAccent,
+              // --- Eggs Card ---
+              _buildCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionHeader(
+                      'EGG SALES',
+                      Icons.egg_outlined,
+                      Colors.orange,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildEggField(
+                      'Eggs (Pieces)',
+                      controller.eggQty,
+                      controller.rateEggsDozen,
+                      controller.qtyEggsCtrl,
+                      controller.rateEggsCtrl,
+                    ),
+                  ],
                 ),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                onChanged: (val) => controller.userTotalAmount.value =
-                    double.tryParse(val) ?? 0.0,
               ),
-            ),
+              const SizedBox(height: 24),
 
-            Obx(() {
-              double diff = controller.differenceAmount;
-              Color diffColor = diff >= 0
-                  ? Colors.green.shade700
-                  : Colors.red.shade700;
-
-              return Container(
-                padding: const EdgeInsets.all(16),
+              // --- Reconciliation Card (Hero Section) ---
+              Container(
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Colors.indigo.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.indigo),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                  border: Border.all(color: Colors.indigo.shade100, width: 2),
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'System Selling Amount: ₹${controller.calculatedSellingAmount.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    _buildSectionHeader(
+                      'RECONCILIATION',
+                      Icons.account_balance_wallet_outlined,
+                      Colors.indigo,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Difference: ₹${diff.toStringAsFixed(2)}',
+                    const SizedBox(height: 20),
+
+                    // User Input for Total Collected
+                    TextField(
+                      controller: controller.totalAmountCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Total Cash Collected (₹)',
+                        labelStyle: TextStyle(
+                          color: Colors.indigo.shade600,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.currency_rupee,
+                          color: Colors.indigo.shade600,
+                        ),
+                        filled: true,
+                        fillColor: Colors.indigo.shade50,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 20,
+                          horizontal: 16,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Colors.indigo.shade400,
+                            width: 2,
+                          ),
+                        ),
+                      ),
                       style: TextStyle(
-                        fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: diffColor,
+                        fontSize: 22,
+                        color: Colors.indigo.shade900,
                       ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      onChanged: (val) => controller.userTotalAmount.value =
+                          double.tryParse(val) ?? 0.0,
                     ),
+                    const SizedBox(height: 24),
+
+                    // Dynamic Difference Output
+                    Obx(() {
+                      double diff = controller.differenceAmount;
+                      Color diffColor = diff >= 0
+                          ? Colors.green.shade600
+                          : Colors.red.shade600;
+                      IconData diffIcon = diff >= 0
+                          ? Icons.trending_up
+                          : Icons.trending_down;
+
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: diffColor.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: diffColor.withOpacity(0.3)),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'System Calculated:',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                                Text(
+                                  '₹${controller.calculatedSellingAmount.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Divider(height: 24),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Difference:',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    Text(
+                                      '₹${diff.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: diffColor,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Icon(diffIcon, color: diffColor),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
                   ],
                 ),
-              );
-            }),
-            const SizedBox(height: 32),
+              ),
+              const SizedBox(height: 24),
 
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Colors.indigo,
-                foregroundColor: Colors.white,
+              // --- Save Button ---
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  backgroundColor: Colors.indigo.shade800,
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  controller.saveWeeklySale();
+                  // Back navigation is handled in the controller to ensure it waits for backup
+                },
+                child: Text(
+                  isEdit ? 'Update Weekly Sales' : 'Save Weekly Sales',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
-              onPressed: () {
-                controller.saveWeeklySale();
-                Get.back();
-              },
-              child: const Text(
-                'Save Weekly Sales',
-                style: TextStyle(fontSize: 18),
-              ),
-            ),
-          ],
+              const SizedBox(height: 32),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // --- HELPER WIDGETS ---
+  // --- UI Helpers ---
+
+  Widget _buildCard({required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon, MaterialColor color) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: color.shade600),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: color.shade800,
+            letterSpacing: 1.1,
+          ),
+        ),
+      ],
+    );
+  }
+
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: Colors.indigo.shade400, width: 2),
+      ),
+    );
+  }
+
+  // --- Dynamic Field Builders ---
+
   Widget _buildWeightField(
     String label,
     RxDouble weightObs,
@@ -195,15 +419,13 @@ class SalesEntryPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                flex: 2,
+                flex: 5,
                 child: TextField(
                   controller: wtCtrl,
-                  decoration: InputDecoration(
-                    labelText: label,
-                    border: const OutlineInputBorder(),
-                  ),
+                  decoration: _inputDecoration(label),
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
@@ -213,13 +435,10 @@ class SalesEntryPage extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                flex: 1,
+                flex: 4,
                 child: TextField(
                   controller: rateCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Rate (₹)',
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: _inputDecoration('Rate (₹)'),
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
@@ -229,17 +448,17 @@ class SalesEntryPage extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Obx(() {
             double total = weightObs.value * rateObs.value;
             if (total == 0) return const SizedBox.shrink();
             return Padding(
-              padding: const EdgeInsets.only(left: 8.0),
+              padding: const EdgeInsets.only(left: 4.0),
               child: Text(
                 'Item Total: ₹${total.toStringAsFixed(2)}',
                 style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
                   color: Colors.green.shade700,
                 ),
               ),
@@ -257,184 +476,162 @@ class SalesEntryPage extends StatelessWidget {
     TextEditingController qtyCtrl,
     TextEditingController rateCtrl,
   ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: TextField(
-                  controller: qtyCtrl,
-                  decoration: InputDecoration(
-                    labelText: label,
-                    border: const OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                  onChanged: (val) => qtyObs.value = int.tryParse(val) ?? 0,
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 5,
+              child: TextField(
+                controller: qtyCtrl,
+                decoration: _inputDecoration(label),
+                keyboardType: TextInputType.number,
+                onChanged: (val) => qtyObs.value = int.tryParse(val) ?? 0,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 1,
-                child: TextField(
-                  controller: rateCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Rate/Doz',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  onChanged: (val) =>
-                      rateObs.value = double.tryParse(val) ?? 0.0,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 4,
+              child: TextField(
+                controller: rateCtrl,
+                decoration: _inputDecoration('Rate / Doz'),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
                 ),
+                onChanged: (val) => rateObs.value = double.tryParse(val) ?? 0.0,
               ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Obx(() {
-            double total = (qtyObs.value / 12) * rateObs.value;
-            if (total == 0) return const SizedBox.shrink();
-            return Padding(
-              padding: const EdgeInsets.only(left: 8.0),
-              child: Text(
-                'Item Total: ₹${total.toStringAsFixed(2)}',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.green.shade700,
-                ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Obx(() {
+          double total = (qtyObs.value / 12) * rateObs.value;
+          if (total == 0) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.only(left: 4.0),
+            child: Text(
+              'Item Total: ₹${total.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.green.shade700,
               ),
-            );
-          }),
-        ],
-      ),
+            ),
+          );
+        }),
+      ],
     );
   }
 
   Widget _buildMuttonSection(SalesEntryController controller) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16.0),
-      padding: const EdgeInsets.all(12.0),
-      decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Mutton Calculation',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.red.shade800,
-              fontSize: 16,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('MUTTON SALES', Icons.restaurant_menu, Colors.red),
+        const SizedBox(height: 16),
+
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.red.shade50.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.red.shade100),
+          ),
+          child: Column(
+            children: [
+              // Row 1: Stock Balances
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: controller.wtMuttonOpeningCtrl,
+                      decoration: _inputDecoration("Yest. Unsold (kg)"),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      onChanged: (val) => controller.muttonOpeningWt.value =
+                          double.tryParse(val) ?? 0.0,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: controller.wtMuttonClosingCtrl,
+                      decoration: _inputDecoration("Today Unsold (kg)"),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      onChanged: (val) => controller.muttonClosingWt.value =
+                          double.tryParse(val) ?? 0.0,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Row 2: Raw Weight & Rate
+              Row(
+                children: [
+                  Expanded(
+                    flex: 5,
+                    child: TextField(
+                      controller: controller.wtMuttonCtrl,
+                      decoration: _inputDecoration('Raw Mutton (kg)'),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      onChanged: (val) => controller.muttonWt.value =
+                          double.tryParse(val) ?? 0.0,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 4,
+                    child: TextField(
+                      controller: controller.rateMuttonCtrl,
+                      decoration: _inputDecoration('Rate (₹)'),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      onChanged: (val) => controller.rateMutton.value =
+                          double.tryParse(val) ?? 0.0,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Live Formula Output
+        Obx(() {
+          double billableWt =
+              (controller.muttonWt.value / 1.6) +
+              controller.muttonOpeningWt.value -
+              controller.muttonClosingWt.value;
+          if (billableWt < 0) billableWt = 0;
+          double total = billableWt * controller.rateMutton.value;
+
+          if (total == 0) return const SizedBox.shrink();
+
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(8),
             ),
-          ),
-          const SizedBox(height: 12),
-
-          // Row 1: Stock Balances
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: controller.wtMuttonOpeningCtrl,
-                  decoration: const InputDecoration(
-                    labelText: "Yest. Unsold (kg)",
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  onChanged: (val) => controller.muttonOpeningWt.value =
-                      double.tryParse(val) ?? 0.0,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: controller.wtMuttonClosingCtrl,
-                  decoration: const InputDecoration(
-                    labelText: "Today Unsold (kg)",
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  onChanged: (val) => controller.muttonClosingWt.value =
-                      double.tryParse(val) ?? 0.0,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Row 2: Raw Weight & Rate
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: TextField(
-                  controller: controller.wtMuttonCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Raw Mutton Wt (kg)',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  onChanged: (val) =>
-                      controller.muttonWt.value = double.tryParse(val) ?? 0.0,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 1,
-                child: TextField(
-                  controller: controller.rateMuttonCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Rate (₹)',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  onChanged: (val) =>
-                      controller.rateMutton.value = double.tryParse(val) ?? 0.0,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Live Formula Output
-          Obx(() {
-            double billableWt =
-                (controller.muttonWt.value / 1.6) +
-                controller.muttonOpeningWt.value -
-                controller.muttonClosingWt.value;
-            if (billableWt < 0) billableWt = 0;
-            double total = billableWt * controller.rateMutton.value;
-
-            if (total == 0) return const SizedBox.shrink();
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Billable Wt: ${billableWt.toStringAsFixed(2)} kg',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey,
+                  'Billable: ${billableWt.toStringAsFixed(2)} kg',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.red.shade700,
                   ),
                 ),
                 Text(
@@ -446,10 +643,10 @@ class SalesEntryPage extends StatelessWidget {
                   ),
                 ),
               ],
-            );
-          }),
-        ],
-      ),
+            ),
+          );
+        }),
+      ],
     );
   }
 }

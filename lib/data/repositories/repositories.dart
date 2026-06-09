@@ -115,6 +115,12 @@ class PurchaseRepository {
     );
     return maps.map((e) => PurchaseModel.fromMap(e)).toList();
   }
+
+  Future<List<PurchaseModel>> getAllPurchases() async {
+    final db = await dbHelper.database;
+    final maps = await db.query(DatabaseHelper.tablePurchases);
+    return maps.map((e) => PurchaseModel.fromMap(e)).toList();
+  }
 }
 
 class SalesRepository {
@@ -246,6 +252,33 @@ class ExpenseRepository {
     final db = await dbHelper.database;
     return await db.delete(
       DatabaseHelper.tableExpenses,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+}
+
+class TraderPaymentRepository {
+  final DatabaseHelper dbHelper = DatabaseHelper.instance;
+
+  Future<int> addPayment(TraderPaymentModel payment) async {
+    final db = await dbHelper.database;
+    return await db.insert(DatabaseHelper.tableTraderPayments, payment.toMap());
+  }
+
+  Future<List<TraderPaymentModel>> getAllPayments() async {
+    final db = await dbHelper.database;
+    final maps = await db.query(
+      DatabaseHelper.tableTraderPayments,
+      orderBy: 'date DESC',
+    );
+    return maps.map((e) => TraderPaymentModel.fromMap(e)).toList();
+  }
+
+  Future<int> deletePayment(int id) async {
+    final db = await dbHelper.database;
+    return await db.delete(
+      DatabaseHelper.tableTraderPayments,
       where: 'id = ?',
       whereArgs: [id],
     );
