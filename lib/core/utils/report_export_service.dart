@@ -98,44 +98,61 @@ class ReportExportService {
       ]);
     }
 
-    // --- SHEET 3: SALES ---
+    // --- SHEET 3: SALES (UPDATED WITH QUANTITIES & BALANCES) ---
     Sheet salesSheet = excel['Sales'];
     salesSheet.appendRow([
       TextCellValue('Date'),
+      TextCellValue('Broiler Qty'),
       TextCellValue('Broiler Wt'),
+      TextCellValue('Mutton Qty'),
       TextCellValue('Mutton Wt'),
+      TextCellValue('Mutton Opening Wt'),
+      TextCellValue('Mutton Closing Wt'),
+      TextCellValue('DP Qty'),
       TextCellValue('DP Wt'),
+      TextCellValue('OG Qty'),
       TextCellValue('OG Wt'),
-      TextCellValue('Eggs'),
-      TextCellValue('Pota'),
-      TextCellValue('Collected Amount'),
+      TextCellValue('Eggs (Pcs)'),
+      TextCellValue('Pota Qty'),
+      TextCellValue('Pota Wt'),
+      TextCellValue('System Amt (₹)'),
+      TextCellValue('Collected Amt (₹)'),
+      TextCellValue('Difference (₹)'),
     ]);
+
     for (var s in sales) {
       salesSheet.appendRow([
         TextCellValue(s.date.split('T')[0]),
+        IntCellValue(s.broilerQty),
         DoubleCellValue(s.broilerWt),
+        IntCellValue(s.muttonQty),
         DoubleCellValue(s.muttonWt),
+        DoubleCellValue(s.muttonOpeningWt),
+        DoubleCellValue(s.muttonClosingWt),
+        IntCellValue(s.dpQty),
         DoubleCellValue(s.dpWt),
+        IntCellValue(s.ogQty),
         DoubleCellValue(s.ogWt),
         IntCellValue(s.eggQty),
+        IntCellValue(s.potaKalejiQty),
         DoubleCellValue(s.potaKalejiWt),
+        DoubleCellValue(s.sellingAmount),
         DoubleCellValue(s.totalAmount),
+        DoubleCellValue(s.difference),
       ]);
     }
 
-    // --- SHEET 4: EXPENSES ---
+    // --- SHEET 4: EXPENSES (REMOVED NOTES COLUMN) ---
     Sheet expSheet = excel['Expenses'];
     expSheet.appendRow([
       TextCellValue('Date'),
       TextCellValue('Category'),
-      TextCellValue('Notes'),
       TextCellValue('Amount'),
     ]);
     for (var e in expenses) {
       expSheet.appendRow([
         TextCellValue(e.date.split('T')[0]),
         TextCellValue(e.category),
-        TextCellValue(e.notes),
         DoubleCellValue(e.amount),
       ]);
     }
@@ -146,7 +163,6 @@ class ReportExportService {
     }
 
     // --- FILE SAVING LOGIC ---
-    // Target the public Downloads directory on Android
     Directory dir = Directory('/storage/emulated/0/Downloads/accounting');
     if (!await dir.exists()) {
       await dir.create(recursive: true);

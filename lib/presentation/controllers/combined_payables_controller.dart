@@ -33,6 +33,7 @@ class CombinedPayablesController extends GetxController {
 
   var allPayments = <TraderPaymentModel>[].obs;
   var payableSummaries = <PayableSummary>[].obs;
+  var allPurchases = <PurchaseModel>[].obs;
 
   @override
   void onInit() {
@@ -69,6 +70,7 @@ class CombinedPayablesController extends GetxController {
       }
 
       final purchases = await _purchaseRepo.getAllPurchases();
+      allPurchases.value = purchases;
       allPayments.value = await _paymentRepo.getAllPayments();
 
       Map<String, PayableSummary> summaryMap = {};

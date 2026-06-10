@@ -36,6 +36,10 @@ class BackupService {
     await _exportTableToSheet(db, excel, DatabaseHelper.tableSales);
     await _exportTableToSheet(db, excel, DatabaseHelper.tableStock);
 
+    // --- NEW TABLES ADDED HERE ---
+    await _exportTableToSheet(db, excel, DatabaseHelper.tableExpenses);
+    await _exportTableToSheet(db, excel, DatabaseHelper.tableTraderPayments);
+
     // Remove the default 'Sheet1'
     if (excel.tables.keys.contains('Sheet1') && excel.tables.keys.length > 1) {
       excel.delete('Sheet1');
@@ -105,6 +109,14 @@ class BackupService {
         await _importSheetToTable(txn, excel, DatabaseHelper.tablePurchases);
         await _importSheetToTable(txn, excel, DatabaseHelper.tableSales);
         await _importSheetToTable(txn, excel, DatabaseHelper.tableStock);
+
+        // --- NEW TABLES ADDED HERE ---
+        await _importSheetToTable(txn, excel, DatabaseHelper.tableExpenses);
+        await _importSheetToTable(
+          txn,
+          excel,
+          DatabaseHelper.tableTraderPayments,
+        );
       });
       return true;
     } catch (e) {
