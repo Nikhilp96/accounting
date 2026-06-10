@@ -231,6 +231,8 @@ class CombinedPayablesPage extends StatelessWidget {
           pDate.isBefore(end.add(const Duration(seconds: 1)));
     }).toList();
 
+    history.sort((a, b) => a.date.compareTo(b.date));
+
     Get.bottomSheet(
       Container(
         // Cap the height to 75% of the screen so the Expanded list doesn't cause overflow errors
