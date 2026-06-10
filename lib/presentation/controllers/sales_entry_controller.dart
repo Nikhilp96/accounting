@@ -41,11 +41,22 @@ class SalesEntryController extends GetxController {
 
   // --- Observables ---
   var broilerWt = 0.0.obs;
+  var broilerQty = 0.obs; // Added
+
   var muttonWt = 0.0.obs;
+  var muttonQty = 0.obs; // Added
+
   var dpWt = 0.0.obs;
+  var dpQty = 0.obs; // Added
+
   var ogWt = 0.0.obs;
+  var ogQty = 0.obs; // Added
+
   var eggQty = 0.obs;
+
   var potaKalejiWt = 0.0.obs;
+  var potaKalejiQty = 0.obs; // Added
+
   var userTotalAmount = 0.0.obs;
 
   var rateBroiler = 0.0.obs;
@@ -57,11 +68,21 @@ class SalesEntryController extends GetxController {
 
   // --- Text Controllers for Edit Mode & Overrides ---
   final wtBroilerCtrl = TextEditingController();
+  final qtyBroilerCtrl = TextEditingController(); // Added
+
   final wtMuttonCtrl = TextEditingController();
+  final qtyMuttonCtrl = TextEditingController(); // Added
+
   final wtDPCtrl = TextEditingController();
+  final qtyDPCtrl = TextEditingController(); // Added
+
   final wtOGCtrl = TextEditingController();
+  final qtyOGCtrl = TextEditingController(); // Added
+
   final qtyEggsCtrl = TextEditingController();
+
   final wtPotaCtrl = TextEditingController();
+  final qtyPotaCtrl = TextEditingController();
   final totalAmountCtrl = TextEditingController();
 
   final rateBroilerCtrl = TextEditingController();
@@ -123,6 +144,20 @@ class SalesEntryController extends GetxController {
       ogWt.value = editData!.ogWt;
       eggQty.value = editData!.eggQty;
       potaKalejiWt.value = editData!.potaKalejiWt;
+      broilerQty.value = editData!.broilerQty;
+      muttonQty.value = editData!.muttonQty;
+      dpQty.value = editData!.dpQty;
+      ogQty.value = editData!.ogQty;
+      potaKalejiQty.value = editData!.potaKalejiQty;
+      if (broilerQty.value > 0) {
+        qtyBroilerCtrl.text = broilerQty.value.toString();
+      }
+      if (muttonQty.value > 0) qtyMuttonCtrl.text = muttonQty.value.toString();
+      if (dpQty.value > 0) qtyDPCtrl.text = dpQty.value.toString();
+      if (ogQty.value > 0) qtyOGCtrl.text = ogQty.value.toString();
+      if (potaKalejiQty.value > 0) {
+        qtyPotaCtrl.text = potaKalejiQty.value.toString();
+      }
       userTotalAmount.value = editData!.totalAmount;
 
       muttonOpeningWt.value = editData!.muttonOpeningWt;
@@ -194,12 +229,17 @@ class SalesEntryController extends GetxController {
       shopCode: shopCode,
       date: date.value.toIso8601String(),
       broilerWt: broilerWt.value,
+      broilerQty: broilerQty.value,
       muttonOpeningWt: muttonOpeningWt.value, // <-- Add this
       muttonClosingWt: muttonClosingWt.value, // <-- Add this
+      muttonQty: muttonQty.value,
       muttonWt: muttonWt.value,
+      dpQty: dpQty.value,
       dpWt: dpWt.value,
+      ogQty: ogQty.value,
       ogWt: ogWt.value,
       eggQty: eggQty.value,
+      potaKalejiQty: potaKalejiQty.value,
       potaKalejiWt: potaKalejiWt.value,
       sellingAmount: calculatedSellingAmount, // Safely stores hard math
       totalAmount: userTotalAmount.value,
@@ -213,6 +253,7 @@ class SalesEntryController extends GetxController {
     } else {
       await _salesRepo.addSale(sale);
       await BackupService.exportToExcel();
+      _resetFields();
     }
 
     Get.snackbar(
@@ -221,5 +262,42 @@ class SalesEntryController extends GetxController {
       backgroundColor: Colors.green.shade700,
       colorText: Colors.white,
     );
+  }
+
+  void _resetFields() {
+    // Reset Observables
+    broilerQty.value = 0;
+    broilerWt.value = 0.0;
+    muttonQty.value = 0;
+    muttonWt.value = 0.0;
+    dpQty.value = 0;
+    dpWt.value = 0.0;
+    ogQty.value = 0;
+    ogWt.value = 0.0;
+    potaKalejiQty.value = 0;
+    potaKalejiWt.value = 0.0;
+    eggQty.value = 0;
+    userTotalAmount.value = 0.0;
+    muttonOpeningWt.value = 0.0;
+    muttonClosingWt.value = 0.0;
+    date.value = DateTime.now();
+
+    // Clear Text Fields
+    qtyBroilerCtrl.clear();
+    wtBroilerCtrl.clear();
+    qtyMuttonCtrl.clear();
+    wtMuttonCtrl.clear();
+    qtyDPCtrl.clear();
+    wtDPCtrl.clear();
+    qtyOGCtrl.clear();
+    wtOGCtrl.clear();
+    qtyPotaCtrl.clear();
+    wtPotaCtrl.clear();
+    qtyEggsCtrl.clear();
+    totalAmountCtrl.clear();
+    wtMuttonOpeningCtrl.clear();
+    wtMuttonClosingCtrl.clear();
+
+    // (Notice we DO NOT reset the rate fields, as those stay cached for convenience!)
   }
 }

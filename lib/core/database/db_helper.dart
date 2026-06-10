@@ -5,7 +5,7 @@ import 'package:path/path.dart';
 
 class DatabaseHelper {
   static const String _databaseName = "shop_accounting.db";
-  static const int _databaseVersion = 3;
+  static const int _databaseVersion = 4;
 
   // Table Names
   static const String tableTraders = 'traders';
@@ -77,13 +77,18 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         shop_code TEXT NOT NULL,
         date TEXT NOT NULL,
+        broiler_qty INTEGER NOT NULL DEFAULT 0,
         broiler_wt REAL NOT NULL,
         mutton_opening_wt REAL DEFAULT 0.0,
         mutton_closing_wt REAL DEFAULT 0.0,
+        mutton_qty INTEGER NOT NULL DEFAULT 0,
         mutton_wt REAL NOT NULL,
+        dp_qty INTEGER NOT NULL DEFAULT 0,
         dp_wt REAL NOT NULL,
+        og_qty INTEGER NOT NULL DEFAULT 0,
         og_wt REAL NOT NULL,
         egg_qty INTEGER NOT NULL,
+        pota_kaleji_qty INTEGER NOT NULL DEFAULT 0,
         pota_kaleji_wt REAL NOT NULL,
         selling_amount REAL NOT NULL,
         total_amount REAL NOT NULL,
@@ -192,6 +197,14 @@ class DatabaseHelper {
           FOREIGN KEY (trader_id) REFERENCES $tableTraders (id)
         )
       ''');
+    }
+
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE $tableSales ADD COLUMN broiler_qty INTEGER NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE $tableSales ADD COLUMN mutton_qty INTEGER NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE $tableSales ADD COLUMN dp_qty INTEGER NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE $tableSales ADD COLUMN og_qty INTEGER NOT NULL DEFAULT 0');
+      await db.execute('ALTER TABLE $tableSales ADD COLUMN pota_kaleji_qty INTEGER NOT NULL DEFAULT 0');
     }
   }
 }

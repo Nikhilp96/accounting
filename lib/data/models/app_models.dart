@@ -70,17 +70,27 @@ class SaleModel {
   final int? id;
   final String shopCode;
   final String date;
+
+  // --- ADDED QUANTITY FIELDS ---
+  final int broilerQty;
   final double broilerWt;
 
-  // --- NEW MUTTON FIELDS ---
-  final double muttonOpeningWt; // Yesterday's Unsold
-  final double muttonClosingWt; // Today's Unsold
-  final double muttonWt; // Raw Weight
+  final double muttonOpeningWt;
+  final double muttonClosingWt;
+  final int muttonQty; // <-- Added
+  final double muttonWt;
 
+  final int dpQty; // <-- Added
   final double dpWt;
+
+  final int ogQty; // <-- Added
   final double ogWt;
+
   final int eggQty;
+
+  final int potaKalejiQty; // <-- Added
   final double potaKalejiWt;
+
   final double sellingAmount;
   final double totalAmount;
   final double difference;
@@ -89,13 +99,18 @@ class SaleModel {
     this.id,
     required this.shopCode,
     required this.date,
+    required this.broilerQty, // <-- Added
     required this.broilerWt,
-    required this.muttonOpeningWt, // <-- Add this
-    required this.muttonClosingWt, // <-- Add this
+    required this.muttonOpeningWt,
+    required this.muttonClosingWt,
+    required this.muttonQty, // <-- Added
     required this.muttonWt,
+    required this.dpQty, // <-- Added
     required this.dpWt,
+    required this.ogQty, // <-- Added
     required this.ogWt,
     required this.eggQty,
+    required this.potaKalejiQty, // <-- Added
     required this.potaKalejiWt,
     required this.sellingAmount,
     required this.totalAmount,
@@ -106,13 +121,18 @@ class SaleModel {
     return {
       'shop_code': shopCode,
       'date': date,
+      'broiler_qty': broilerQty, // <-- Added
       'broiler_wt': broilerWt,
-      'mutton_opening_wt': muttonOpeningWt, // <-- Add this
-      'mutton_closing_wt': muttonClosingWt, // <-- Add this
+      'mutton_opening_wt': muttonOpeningWt,
+      'mutton_closing_wt': muttonClosingWt,
+      'mutton_qty': muttonQty, // <-- Added
       'mutton_wt': muttonWt,
+      'dp_qty': dpQty, // <-- Added
       'dp_wt': dpWt,
+      'og_qty': ogQty, // <-- Added
       'og_wt': ogWt,
       'egg_qty': eggQty,
+      'pota_kaleji_qty': potaKalejiQty, // <-- Added
       'pota_kaleji_wt': potaKalejiWt,
       'selling_amount': sellingAmount,
       'total_amount': totalAmount,
@@ -125,15 +145,18 @@ class SaleModel {
       id: map['id'],
       shopCode: map['shop_code'],
       date: map['date'],
+      broilerQty: map['broiler_qty'] ?? 0, // <-- Added
       broilerWt: map['broiler_wt'] ?? 0.0,
-      muttonOpeningWt:
-          map['mutton_opening_wt'] ?? 0.0, // <-- Add this (with fallback)
-      muttonClosingWt:
-          map['mutton_closing_wt'] ?? 0.0, // <-- Add this (with fallback)
+      muttonOpeningWt: map['mutton_opening_wt'] ?? 0.0,
+      muttonClosingWt: map['mutton_closing_wt'] ?? 0.0,
+      muttonQty: map['mutton_qty'] ?? 0, // <-- Added
       muttonWt: map['mutton_wt'] ?? 0.0,
+      dpQty: map['dp_qty'] ?? 0, // <-- Added
       dpWt: map['dp_wt'] ?? 0.0,
+      ogQty: map['og_qty'] ?? 0, // <-- Added
       ogWt: map['og_wt'] ?? 0.0,
       eggQty: map['egg_qty'] ?? 0,
+      potaKalejiQty: map['pota_kaleji_qty'] ?? 0, // <-- Added
       potaKalejiWt: map['pota_kaleji_wt'] ?? 0.0,
       sellingAmount: map['selling_amount'] ?? 0.0,
       totalAmount: map['total_amount'] ?? 0.0,

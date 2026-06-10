@@ -109,29 +109,37 @@ class SalesEntryPage extends StatelessWidget {
                     const SizedBox(height: 16),
                     _buildWeightField(
                       'Broiler (kg)',
+                      controller.broilerQty,
                       controller.broilerWt,
                       controller.rateBroiler,
+                      controller.qtyBroilerCtrl,
                       controller.wtBroilerCtrl,
                       controller.rateBroilerCtrl,
                     ),
                     _buildWeightField(
                       'Desi DP (kg)',
+                      controller.dpQty,
                       controller.dpWt,
                       controller.rateDP,
+                      controller.qtyDPCtrl,
                       controller.wtDPCtrl,
                       controller.rateDPCtrl,
                     ),
                     _buildWeightField(
                       'Desi OG (kg)',
+                      controller.ogQty,
                       controller.ogWt,
                       controller.rateOG,
+                      controller.qtyOGCtrl,
                       controller.wtOGCtrl,
                       controller.rateOGCtrl,
                     ),
                     _buildWeightField(
                       'Pota Kalegi (kg)',
+                      controller.potaKalejiQty,
                       controller.potaKalejiWt,
                       controller.ratePotaKaleji,
+                      controller.qtyPotaCtrl,
                       controller.wtPotaCtrl,
                       controller.ratePotaCtrl,
                     ),
@@ -408,8 +416,10 @@ class SalesEntryPage extends StatelessWidget {
 
   Widget _buildWeightField(
     String label,
+    RxInt qtyObs,
     RxDouble weightObs,
     RxDouble rateObs,
+    TextEditingController qtyCtrl,
     TextEditingController wtCtrl,
     TextEditingController rateCtrl,
   ) {
@@ -422,7 +432,17 @@ class SalesEntryPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                flex: 5,
+                flex: 3,
+                child: TextField(
+                  controller: qtyCtrl,
+                  decoration: _inputDecoration('Qty'),
+                  keyboardType: TextInputType.number,
+                  onChanged: (val) => qtyObs.value = int.tryParse(val) ?? 0,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 4,
                 child: TextField(
                   controller: wtCtrl,
                   decoration: _inputDecoration(label),
@@ -433,7 +453,7 @@ class SalesEntryPage extends StatelessWidget {
                       weightObs.value = double.tryParse(val) ?? 0.0,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
                 flex: 4,
                 child: TextField(
@@ -571,14 +591,25 @@ class SalesEntryPage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
 
-              // Row 2: Raw Weight & Rate
+              // Row 2: Raw Qty, Weight & Rate
               Row(
                 children: [
                   Expanded(
-                    flex: 5,
+                    flex: 3,
+                    child: TextField(
+                      controller: controller.qtyMuttonCtrl,
+                      decoration: _inputDecoration('Qty'),
+                      keyboardType: TextInputType.number,
+                      onChanged: (val) =>
+                          controller.muttonQty.value = int.tryParse(val) ?? 0,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 4,
                     child: TextField(
                       controller: controller.wtMuttonCtrl,
-                      decoration: _inputDecoration('Raw Mutton (kg)'),
+                      decoration: _inputDecoration('Raw (kg)'),
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
@@ -586,7 +617,7 @@ class SalesEntryPage extends StatelessWidget {
                           double.tryParse(val) ?? 0.0,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
                     flex: 4,
                     child: TextField(

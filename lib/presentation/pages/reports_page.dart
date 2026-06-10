@@ -1056,12 +1056,24 @@ class ReportsPage extends StatelessWidget {
       return DataRow(
         cells: [
           DataCell(Text(DateUtil.formatIso(sale.date))),
-          DataCell(Text(sale.broilerWt.toStringAsFixed(2))),
-          DataCell(Text(sale.muttonWt.toStringAsFixed(2))),
-          DataCell(Text(sale.dpWt.toStringAsFixed(2))),
-          DataCell(Text(sale.ogWt.toStringAsFixed(2))),
+          DataCell(
+            Text('${sale.broilerQty} / ${sale.broilerWt.toStringAsFixed(2)}'),
+          ), // Combined
+          DataCell(
+            Text('${sale.muttonQty} / ${sale.muttonWt.toStringAsFixed(2)}'),
+          ), // Combined
+          DataCell(
+            Text('${sale.dpQty} / ${sale.dpWt.toStringAsFixed(2)}'),
+          ), // Combined
+          DataCell(
+            Text('${sale.ogQty} / ${sale.ogWt.toStringAsFixed(2)}'),
+          ), // Combined
           DataCell(Text(sale.eggQty.toString())),
-          DataCell(Text(sale.potaKalejiWt.toStringAsFixed(2))),
+          DataCell(
+            Text(
+              '${sale.potaKalejiQty} / ${sale.potaKalejiWt.toStringAsFixed(2)}',
+            ),
+          ), // Combined  
           DataCell(Text('₹${sale.sellingAmount.toStringAsFixed(2)}')),
           DataCell(
             Text(
@@ -1119,11 +1131,21 @@ class ReportsPage extends StatelessWidget {
     }).toList();
 
     double totBroiler = data.fold(0.0, (sum, item) => sum + item.broilerWt);
+    int totBroilerQty = data.fold(0, (sum, item) => sum + item.broilerQty);
+
     double totMutton = data.fold(0.0, (sum, item) => sum + item.muttonWt);
+    int totMuttonQty = data.fold(0, (sum, item) => sum + item.muttonQty);
+
     double totDp = data.fold(0.0, (sum, item) => sum + item.dpWt);
+    int totDpQty = data.fold(0, (sum, item) => sum + item.dpQty);
+
     double totOg = data.fold(0.0, (sum, item) => sum + item.ogWt);
+    int totOgQty = data.fold(0, (sum, item) => sum + item.ogQty);
+
     int totEggs = data.fold(0, (sum, item) => sum + item.eggQty);
+
     double totPota = data.fold(0.0, (sum, item) => sum + item.potaKalejiWt);
+    int totPotaQty = data.fold(0, (sum, item) => sum + item.potaKalejiQty);
     double totSys = data.fold(0.0, (sum, item) => sum + item.sellingAmount);
     double totCol = data.fold(0.0, (sum, item) => sum + item.totalAmount);
     double totDiff = data.fold(0.0, (sum, item) => sum + item.difference);
@@ -1144,25 +1166,25 @@ class ReportsPage extends StatelessWidget {
           ),
           DataCell(
             Text(
-              totBroiler.toStringAsFixed(2),
+              '$totBroilerQty / ${totBroiler.toStringAsFixed(2)}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
           DataCell(
             Text(
-              totMutton.toStringAsFixed(2),
+              '$totMuttonQty / ${totMutton.toStringAsFixed(2)}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
           DataCell(
             Text(
-              totDp.toStringAsFixed(2),
+              '$totDpQty / ${totDp.toStringAsFixed(2)}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
           DataCell(
             Text(
-              totOg.toStringAsFixed(2),
+              '$totOgQty / ${totOg.toStringAsFixed(2)}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
@@ -1174,7 +1196,7 @@ class ReportsPage extends StatelessWidget {
           ),
           DataCell(
             Text(
-              totPota.toStringAsFixed(2),
+              '$totPotaQty / ${totPota.toStringAsFixed(2)}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
@@ -1237,25 +1259,25 @@ class ReportsPage extends StatelessWidget {
             ),
             DataColumn(
               label: Text(
-                'Broiler',
+                'Broiler\n(Q/W)',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
             DataColumn(
               label: Text(
-                'Mutton',
+                'Mutton\n(Q/W)',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
             DataColumn(
               label: Text(
-                'DP Wt',
+                'DP\n(Q/W)',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
             DataColumn(
               label: Text(
-                'OG Wt',
+                'OG\n(Q/W)',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -1267,7 +1289,7 @@ class ReportsPage extends StatelessWidget {
             ),
             DataColumn(
               label: Text(
-                'Pota',
+                'Pota\n(Q/W)',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
