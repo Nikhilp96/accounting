@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/dashboard_controller.dart';
 import 'package:accounting/presentation/pages/combined_payables_page.dart';
+import 'package:accounting/presentation/pages/analytics_page.dart';
 
 class DashboardPage extends GetView<DashboardController> {
   const DashboardPage({super.key});
@@ -143,6 +144,72 @@ class DashboardPage extends GetView<DashboardController> {
                         Icons.arrow_forward_ios,
                         color: Colors.white54,
                         size: 18,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: () => Get.to(() => const AnalyticsPage()),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.teal.shade600, Colors.teal.shade900],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.teal.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.bar_chart_outlined,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Business Analytics Dashboard',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Compare Shop Profits & Expense Outlays',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.white70,
+                        size: 16,
                       ),
                     ],
                   ),

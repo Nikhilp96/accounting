@@ -11,9 +11,12 @@ class PayableSummary {
   final String itemType;
 
   double periodPurchases = 0;
+  double periodPayments = 0;
   double lifetimePurchases = 0;
   double lifetimePayments = 0;
+
   double get outstanding => lifetimePurchases - lifetimePayments;
+  double get periodOutstanding => periodPurchases - periodPayments;
 
   PayableSummary({
     required this.displayName,
@@ -77,7 +80,11 @@ class CombinedPayablesController extends GetxController {
       String genKey(int? tId, String iType) =>
           tId != null ? 'T_$tId' : 'I_$iType';
 
-      // 1. Process Purchases
+      // Offset dates for next week's payments
+      DateTime nextWeekStart = _startDate.add(const Duration(days: 7));
+      DateTime nextWeekEnd = _endDate.add(const Duration(days: 7));
+
+      // 1. Process Purchases (For Selected Week)
       for (var p in purchases) {
         String key = genKey(p.traderId, p.itemType);
         if (!summaryMap.containsKey(key)) {
@@ -100,11 +107,20 @@ class CombinedPayablesController extends GetxController {
         }
       }
 
-      // 2. Process Payments
+      // 2. Process Payments (For Next Week)
       for (var pay in allPayments) {
         String key = genKey(pay.traderId, pay.itemType);
         if (summaryMap.containsKey(key)) {
           summaryMap[key]!.lifetimePayments += pay.amount;
+
+          DateTime payDate = DateTime.parse(pay.date);
+          // Check if payment was made in the following week cycle
+          if (payDate.isAfter(
+                nextWeekStart.subtract(const Duration(seconds: 1)),
+              ) &&
+              payDate.isBefore(nextWeekEnd.add(const Duration(seconds: 1)))) {
+            summaryMap[key]!.periodPayments += pay.amount;
+          }
         }
       }
 

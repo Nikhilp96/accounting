@@ -133,12 +133,12 @@ class CombinedPayablesPage extends StatelessWidget {
             ),
             const Divider(),
 
-            // Contextual Info
+            // --- WEEK SPECIFIC BREAKDOWN ---
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Billing for Selected Week:',
+                  'Purchases in Selected Week:',
                   style: TextStyle(color: Colors.black54),
                 ),
                 Text(
@@ -150,14 +150,60 @@ class CombinedPayablesPage extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // --- UI TEXT UPDATED HERE ---
+                const Text(
+                  'Payments in Following Week:',
+                  style: TextStyle(color: Colors.black54),
+                ),
+                Text(
+                  '- ₹${summary.periodPayments.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    color: Colors.green.shade700,
+                  ),
+                ),
+              ],
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 4.0),
+              child: Divider(thickness: 1, color: Colors.black12),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Week\'s Net Outstanding:',
+                  style: TextStyle(
+                    color: Colors.indigo.shade900,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '₹${summary.periodOutstanding.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: summary.periodOutstanding > 0
+                        ? Colors.red.shade700
+                        : Colors.green.shade700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
 
-            // Core Metric
+            // --- LIFETIME TOTAL OUTSTANDING BALANCE ---
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: balanceColor.withOpacity(0.1),
+                color: balanceColor.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: balanceColor.withOpacity(0.3)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
