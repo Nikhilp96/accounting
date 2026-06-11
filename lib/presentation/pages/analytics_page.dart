@@ -227,42 +227,42 @@ class AnalyticsPage extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         if (controller.masterLeakage.value != 0)
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: controller.masterLeakage.value < 0
-                ? Colors.red.shade50
-                : Colors.green.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
               color: controller.masterLeakage.value < 0
-                  ? Colors.red.shade200
-                  : Colors.green.shade200,
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.warning_amber_rounded,
+                  ? Colors.red.shade50
+                  : Colors.green.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
                 color: controller.masterLeakage.value < 0
-                    ? Colors.red.shade700
-                    : Colors.green.shade700,
+                    ? Colors.red.shade200
+                    : Colors.green.shade200,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Cash Difference: ₹${controller.masterLeakage.value.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    color: controller.masterLeakage.value < 0
-                        ? Colors.red.shade900
-                        : Colors.green.shade900,
-                    fontWeight: FontWeight.bold,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: controller.masterLeakage.value < 0
+                      ? Colors.red.shade700
+                      : Colors.green.shade700,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Cash Difference: ₹${controller.masterLeakage.value.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      color: controller.masterLeakage.value < 0
+                          ? Colors.red.shade900
+                          : Colors.green.shade900,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
@@ -316,9 +316,7 @@ class AnalyticsPage extends StatelessWidget {
       height: 180,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-        ), // Padding inside the scroll view
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: controller.itemMargins.length,
         itemBuilder: (context, index) {
           final item = controller.itemMargins[index];
@@ -328,8 +326,16 @@ class AnalyticsPage extends StatelessWidget {
 
           IconData icon = Icons.set_meal_outlined;
           if (item.itemName == 'Eggs') icon = Icons.egg_outlined;
-          if (item.itemName == 'Broiler' || item.itemName == 'Desi')
+          // --- UPDATED: Map DP and OG to the Bird Icon ---
+          if (item.itemName == 'Broiler' ||
+              item.itemName == 'DP' ||
+              item.itemName == 'OG') {
             icon = Icons.pets;
+          }
+          if (item.itemName == 'Mutton') icon = Icons.restaurant_menu;
+
+          // Dynamically set the unit label
+          String unitLabel = item.itemName == 'Eggs' ? '/doz' : '/kg';
 
           return Container(
             width: 160,
@@ -382,14 +388,17 @@ class AnalyticsPage extends StatelessWidget {
                   'Gross Margin',
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                 ),
+
+                // Show dynamic unit label here (/doz or /kg)
                 Text(
-                  '₹${item.grossMargin.toStringAsFixed(1)} /unit',
+                  '₹${item.grossMargin.toStringAsFixed(1)} $unitLabel',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: marginColor,
                   ),
                 ),
+
                 const SizedBox(height: 4),
                 Container(
                   padding: const EdgeInsets.symmetric(

@@ -24,8 +24,17 @@ class ItemMarginData {
   double totalUnitsPurchased = 0.0;
   double sellingRate = 0.0;
 
-  double get avgPurchaseRate =>
-      totalUnitsPurchased > 0 ? totalPurchaseCost / totalUnitsPurchased : 0.0;
+  // Calculate cost per standardized unit (Dozen for Eggs, Kg for others)
+  double get avgPurchaseRate {
+    if (totalUnitsPurchased <= 0) return 0.0;
+
+    // This gives the cost of 1 piece (egg) or 1 kg (meat)
+    double singleUnitCost = totalPurchaseCost / totalUnitsPurchased;
+
+    // Scale up to 12 pieces if the item is Eggs to match Master Selling Rate
+    return itemName == 'Eggs' ? singleUnitCost * 12 : singleUnitCost;
+  }
+
   double get grossMargin => sellingRate - avgPurchaseRate;
   double get marginPercent =>
       avgPurchaseRate > 0 ? (grossMargin / avgPurchaseRate) * 100 : 0.0;
@@ -126,21 +135,60 @@ class AnalyticsController extends GetxController {
         for (var p in purchases) {
           pTotal += p.amount;
 
-          // Item-Wise Aggregation
-          String key = p.itemType;
-          if (!tempMargins.containsKey(key)) {
-            tempMargins[key] = ItemMarginData(key);
-            // If buying 'Desi', compare against 'DP' selling rate as a baseline proxy if specific Desi rate is missing
-            tempMargins[key]!.sellingRate =
-                sellingRates[key] ?? sellingRates['DP'] ?? 0.0;
-          }
+          // --- UPDATED: Item-Wise Aggregation ---
+          if (p.itemType == 'Desi') {
+            // Split 'Desi' into DP and OG using weight1 and weight2
+            double dpWt = p.weight1 ?? 0.0;
+            double ogWt = p.weight2 ?? 0.0;
 
-          tempMargins[key]!.totalPurchaseCost += p.amount;
-          if (p.rate > 0) {
-            // Amount / Rate = Exact units (kg or pieces) billed by the trader
-            tempMargins[key]!.totalUnitsPurchased += (p.amount / p.rate);
+            if (dpWt > 0) {
+              if (!tempMargins.containsKey('DP')) {
+                tempMargins['DP'] = ItemMarginData('DP');
+                tempMargins['DP']!.sellingRate = sellingRates['DP'] ?? 0.0;
+              }
+              // Calculate specific cost footprint for DP
+              tempMargins['DP']!.totalPurchaseCost += (dpWt * p.rate);
+              tempMargins['DP']!.totalUnitsPurchased += dpWt;
+            }
+
+            if (ogWt > 0) {
+              if (!tempMargins.containsKey('OG')) {
+                tempMargins['OG'] = ItemMarginData('OG');
+                tempMargins['OG']!.sellingRate = sellingRates['OG'] ?? 0.0;
+              }
+              // Calculate specific cost footprint for OG
+              tempMargins['OG']!.totalPurchaseCost += (ogWt * p.rate);
+              tempMargins['OG']!.totalUnitsPurchased += ogWt;
+            }
+          } else {
+            // Standard handling for Broiler, Eggs, Pota Kalegi
+            String key = p.itemType;
+            if (!tempMargins.containsKey(key)) {
+              tempMargins[key] = ItemMarginData(key);
+              tempMargins[key]!.sellingRate = sellingRates[key] ?? 0.0;
+            }
+
+            tempMargins[key]!.totalPurchaseCost += p.amount;
+            if (p.rate > 0) {
+              tempMargins[key]!.totalUnitsPurchased += (p.amount / p.rate);
+            }
           }
         }
+
+        if (tempMargins.containsKey('Broiler')) {
+          double broilerCostPerKg = tempMargins['Broiler']!.avgPurchaseRate;
+
+          if (!tempMargins.containsKey('Mutton')) {
+            tempMargins['Mutton'] = ItemMarginData('Mutton');
+          }
+
+          tempMargins['Mutton']!.sellingRate = sellingRates['Mutton'] ?? 0.0;
+
+          // Using your 1.6 yield ratio: Cost of 1kg Mutton = Cost of 1.6kg Broiler
+          tempMargins['Mutton']!.totalUnitsPurchased = 1.0;
+          tempMargins['Mutton']!.totalPurchaseCost = broilerCostPerKg * 1.6;
+        }
+
         tempPerformance[shop]!.totalPurchases = pTotal;
         gPurchases += pTotal;
 
@@ -151,7 +199,7 @@ class AnalyticsController extends GetxController {
         tempPerformance[shop]!.systemSales = sSystem;
         gCollected += sCollected;
 
-        double shopLeakage = sCollected - sSystem;
+        double shopLeakage = sSystem - sCollected;
         gLeakage += shopLeakage;
 
         // Expenses
