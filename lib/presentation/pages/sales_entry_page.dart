@@ -152,6 +152,42 @@ class SalesEntryPage extends StatelessWidget {
               _buildCard(child: _buildMuttonSection(controller)),
               const SizedBox(height: 16),
 
+              _buildCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionHeader(
+                      'MORTALITY (DEAD BIRDS)',
+                      Icons.warning_amber_rounded,
+                      Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildMortalityField(
+                      'Broiler Dead (kg)',
+                      controller.broilerDeadQty,
+                      controller.broilerDeadWt,
+                      controller.qtyBroilerDeadCtrl,
+                      controller.wtBroilerDeadCtrl,
+                    ),
+                    _buildMortalityField(
+                      'DP Dead (kg)',
+                      controller.dpDeadQty,
+                      controller.dpDeadWt,
+                      controller.qtyDPDeadCtrl,
+                      controller.wtDPDeadCtrl,
+                    ),
+                    _buildMortalityField(
+                      'OG Dead (kg)',
+                      controller.ogDeadQty,
+                      controller.ogDeadWt,
+                      controller.qtyOGDeadCtrl,
+                      controller.wtOGDeadCtrl,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
               // --- Eggs Card ---
               _buildCard(
                 child: Column(
@@ -678,6 +714,45 @@ class SalesEntryPage extends StatelessWidget {
           );
         }),
       ],
+    );
+  }
+
+  // Add the _buildMortalityField UI Helper at the bottom of the file:
+  Widget _buildMortalityField(
+    String label,
+    RxInt qtyObs,
+    RxDouble weightObs,
+    TextEditingController qtyCtrl,
+    TextEditingController wtCtrl,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 3,
+            child: TextField(
+              controller: qtyCtrl,
+              decoration: _inputDecoration('Dead Qty'),
+              keyboardType: TextInputType.number,
+              onChanged: (val) => qtyObs.value = int.tryParse(val) ?? 0,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 4,
+            child: TextField(
+              controller: wtCtrl,
+              decoration: _inputDecoration(label),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              onChanged: (val) => weightObs.value = double.tryParse(val) ?? 0.0,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

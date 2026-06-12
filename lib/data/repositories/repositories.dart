@@ -1,3 +1,5 @@
+import 'package:sqflite/sqflite.dart';
+
 import '../../core/database/db_helper.dart';
 import '../models/app_models.dart';
 
@@ -282,5 +284,27 @@ class TraderPaymentRepository {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+}
+
+class ExpenseCategoryRepository {
+  final DatabaseHelper dbHelper = DatabaseHelper.instance;
+
+  Future<int> addCategory(ExpenseCategoryModel category) async {
+    final db = await dbHelper.database;
+    return await db.insert(
+      DatabaseHelper.tableExpenseCategories,
+      category.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+  }
+
+  Future<List<ExpenseCategoryModel>> getAllCategories() async {
+    final db = await dbHelper.database;
+    final maps = await db.query(
+      DatabaseHelper.tableExpenseCategories,
+      orderBy: 'name ASC',
+    );
+    return maps.map((e) => ExpenseCategoryModel.fromMap(e)).toList();
   }
 }

@@ -226,13 +226,17 @@ class ReportsController extends GetxController {
 
   Map<String, Map<String, double>> get birdsEyeView {
     Map<String, Map<String, double>> summary = {
-      'Broiler': {'Purchase': 0.0, 'Sales': 0.0, 'Difference': 0.0},
-      'DP': {'Purchase': 0.0, 'Sales': 0.0, 'Difference': 0.0},
-      'OG': {'Purchase': 0.0, 'Sales': 0.0, 'Difference': 0.0},
+      'Broiler': {
+        'Purchase': 0.0,
+        'Sales': 0.0,
+        'Dead': 0.0,
+        'Difference': 0.0,
+      },
+      'DP': {'Purchase': 0.0, 'Sales': 0.0, 'Dead': 0.0, 'Difference': 0.0},
+      'OG': {'Purchase': 0.0, 'Sales': 0.0, 'Dead': 0.0, 'Difference': 0.0},
     };
 
     // 1. Calculate Purchases (Actual Consumption = Pur + Open - Close)
-    // Broiler
     double bPur1 = purchasesList
         .where((p) => p.itemType == 'Broiler')
         .fold(0.0, (s, p) => s + (p.weight1 ?? 0.0));
@@ -247,7 +251,6 @@ class ReportsController extends GetxController {
             (stockMap['Opening_Broiler_Wt2'] ?? 0.0) -
             (stockMap['Closing_Broiler_Wt2'] ?? 0.0));
 
-    // DP
     double dPur = purchasesList
         .where((p) => p.itemType == 'Desi')
         .fold(0.0, (s, p) => s + (p.weight1 ?? 0.0));
@@ -256,7 +259,6 @@ class ReportsController extends GetxController {
         (stockMap['Opening_Desi_Wt1'] ?? 0.0) -
         (stockMap['Closing_Desi_Wt1'] ?? 0.0));
 
-    // OG
     double oPur = purchasesList
         .where((p) => p.itemType == 'Desi')
         .fold(0.0, (s, p) => s + (p.weight2 ?? 0.0));
@@ -265,24 +267,32 @@ class ReportsController extends GetxController {
         (stockMap['Opening_Desi_Wt2'] ?? 0.0) -
         (stockMap['Closing_Desi_Wt2'] ?? 0.0));
 
-    // 2. Calculate Sales
+    // 2. Calculate Actual Sales & Mortality
     double totalBroilerSales = salesList.fold(0.0, (s, i) => s + i.broilerWt);
     double totalMuttonSales = salesList.fold(0.0, (s, i) => s + i.muttonWt);
-    double totalDpSales = salesList.fold(0.0, (s, i) => s + i.dpWt);
-    double totalOgSales = salesList.fold(0.0, (s, i) => s + i.ogWt);
-
     summary['Broiler']!['Sales'] = totalBroilerSales + totalMuttonSales;
-    summary['DP']!['Sales'] = totalDpSales;
-    summary['OG']!['Sales'] = totalOgSales;
+    summary['Broiler']!['Dead'] = salesList.fold(
+      0.0,
+      (s, i) => s + i.broilerDeadWt,
+    );
 
-    // 3. Difference (Formula: Sales - Purchase)
-    // Positive = Surplus, Negative = Deficit
+    summary['DP']!['Sales'] = salesList.fold(0.0, (s, i) => s + i.dpWt);
+    summary['DP']!['Dead'] = salesList.fold(0.0, (s, i) => s + i.dpDeadWt);
+
+    summary['OG']!['Sales'] = salesList.fold(0.0, (s, i) => s + i.ogWt);
+    summary['OG']!['Dead'] = salesList.fold(0.0, (s, i) => s + i.ogDeadWt);
+
+    // 3. Difference Formula: Total Purchase - (Actual Sales + Dead)
+    // Positive difference = Shortage/Leakage. Negative difference = Surplus.
     summary['Broiler']!['Difference'] =
-        summary['Broiler']!['Sales']! - summary['Broiler']!['Purchase']!;
+        summary['Broiler']!['Purchase']! -
+        (summary['Broiler']!['Sales']! + summary['Broiler']!['Dead']!);
     summary['DP']!['Difference'] =
-        summary['DP']!['Sales']! - summary['DP']!['Purchase']!;
+        summary['DP']!['Purchase']! -
+        (summary['DP']!['Sales']! + summary['DP']!['Dead']!);
     summary['OG']!['Difference'] =
-        summary['OG']!['Sales']! - summary['OG']!['Purchase']!;
+        summary['OG']!['Purchase']! -
+        (summary['OG']!['Sales']! + summary['OG']!['Dead']!);
 
     return summary;
   }

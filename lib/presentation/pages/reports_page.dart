@@ -499,7 +499,7 @@ class ReportsPage extends StatelessWidget {
                     child: const Row(
                       children: [
                         Expanded(
-                          flex: 2,
+                          flex: 3,
                           child: Padding(
                             padding: EdgeInsets.only(left: 8.0),
                             child: Text(
@@ -520,6 +520,14 @@ class ReportsPage extends StatelessWidget {
                           flex: 2,
                           child: Text(
                             'Sales',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        Expanded(
+                          flex: 2,
+                          child: Text(
+                            'Dead',
                             style: TextStyle(fontWeight: FontWeight.bold),
                             textAlign: TextAlign.center,
                           ),
@@ -572,15 +580,19 @@ class ReportsPage extends StatelessWidget {
   }
 
   Widget _buildBirdRow(String label, Map<String, double> values) {
-    Color diffColor = values['Difference']! >= 0
-        ? Colors.green.shade700
-        : Colors.red.shade700;
+    // Diff > 0 means missing stock (Red). Diff < 0 means surplus (Green).
+    Color diffColor = values['Difference']! > 0.01
+        ? Colors.red.shade700
+        : (values['Difference']! < -0.01
+              ? Colors.green.shade700
+              : Colors.black54);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         children: [
           Expanded(
-            flex: 2,
+            flex: 3,
             child: Padding(
               padding: const EdgeInsets.only(left: 8.0),
               child: Text(
@@ -601,6 +613,17 @@ class ReportsPage extends StatelessWidget {
             child: Text(
               values['Sales']!.toStringAsFixed(1),
               textAlign: TextAlign.center,
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              values['Dead']!.toStringAsFixed(1),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.red.shade400,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           Expanded(
@@ -1073,7 +1096,7 @@ class ReportsPage extends StatelessWidget {
             Text(
               '${sale.potaKalejiQty} / ${sale.potaKalejiWt.toStringAsFixed(2)}',
             ),
-          ), // Combined  
+          ), // Combined
           DataCell(Text('₹${sale.sellingAmount.toStringAsFixed(2)}')),
           DataCell(
             Text(

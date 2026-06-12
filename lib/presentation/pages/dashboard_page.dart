@@ -1,6 +1,8 @@
 import 'package:accounting/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:share_plus/share_plus.dart'; // <-- Added Share Plus import
+import 'package:accounting/core/utils/backup_service.dart'; // <-- Added BackupService import
 import '../controllers/dashboard_controller.dart';
 import 'package:accounting/presentation/pages/combined_payables_page.dart';
 import 'package:accounting/presentation/pages/analytics_page.dart';
@@ -11,7 +13,7 @@ class DashboardPage extends GetView<DashboardController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100, // Soft background
+      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         title: const Text(
           'Overview',
@@ -81,7 +83,7 @@ class DashboardPage extends GetView<DashboardController> {
               ),
               const SizedBox(height: 12),
 
-              // Combined Payables Tile
+              // 1. Combined Payables Tile
               InkWell(
                 onTap: () => Get.to(() => const CombinedPayablesPage()),
                 borderRadius: BorderRadius.circular(16),
@@ -140,16 +142,14 @@ class DashboardPage extends GetView<DashboardController> {
                           ],
                         ),
                       ),
-                      const Icon(
-                        Icons.arrow_forward_ios,
-                        color: Colors.white54,
-                        size: 18,
-                      ),
+                      const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 18),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 16),
+
+              // 2. Analytics Tile
               InkWell(
                 onTap: () => Get.to(() => const AnalyticsPage()),
                 borderRadius: BorderRadius.circular(12),
@@ -188,7 +188,7 @@ class DashboardPage extends GetView<DashboardController> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Business Analytics Dashboard',
+                              'Business Analytics',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
@@ -197,7 +197,7 @@ class DashboardPage extends GetView<DashboardController> {
                             ),
                             SizedBox(height: 4),
                             Text(
-                              'Compare Shop Profits & Expense Outlays',
+                              'Compare Shop Profits & Expenses',
                               style: TextStyle(
                                 color: Colors.white70,
                                 fontSize: 13,
@@ -206,11 +206,98 @@ class DashboardPage extends GetView<DashboardController> {
                           ],
                         ),
                       ),
-                      const Icon(
-                        Icons.arrow_forward_ios,
-                        color: Colors.white70,
-                        size: 16,
+                      const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // 3. --- NEW: SHARE BACKUP TILE ---
+              InkWell(
+                onTap: () async {
+                  // Show loading spinner
+                  Get.dialog(
+                    const Center(child: CircularProgressIndicator(color: Colors.white)),
+                    barrierDismissible: false,
+                  );
+                  
+                  // Generate Excel
+                  String? path = await BackupService.exportToExcel();
+                  
+                  // Close loading spinner
+                  Get.back();
+                  
+                  if (path != null) {
+                    // Trigger Native Share Menu
+                    await Share.shareXFiles(
+                      [XFile(path)], 
+                      text: 'Shop Accounting Master Backup Database',
+                    );
+                  } else {
+                    Get.snackbar(
+                      'Error', 
+                      'Failed to generate backup or permissions denied.', 
+                      backgroundColor: Colors.red.shade700, 
+                      colorText: Colors.white,
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.green.shade600, Colors.green.shade800],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.green.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
                       ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.share_outlined,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Share Excel Backup',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Generate & send latest DB to WhatsApp/Drive',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
                     ],
                   ),
                 ),

@@ -23,8 +23,8 @@ class BackupService {
   }
 
   // --- 2. EXPORT TO EXCEL (BACKUP) ---
-  static Future<void> exportToExcel() async {
-    if (!await requestPermissions()) return;
+  static Future<String?> exportToExcel() async {
+    if (!await requestPermissions()) return null;
 
     final db = await DatabaseHelper.instance.database;
     var excel = Excel.createExcel();
@@ -35,8 +35,6 @@ class BackupService {
     await _exportTableToSheet(db, excel, DatabaseHelper.tablePurchases);
     await _exportTableToSheet(db, excel, DatabaseHelper.tableSales);
     await _exportTableToSheet(db, excel, DatabaseHelper.tableStock);
-
-    // --- NEW TABLES ADDED HERE ---
     await _exportTableToSheet(db, excel, DatabaseHelper.tableExpenses);
     await _exportTableToSheet(db, excel, DatabaseHelper.tableTraderPayments);
 
@@ -56,6 +54,8 @@ class BackupService {
     debugPrint('Backup updated at: $_folderPath/$_fileName');
 
     MediaScanner.loadMedia(path: file.path);
+
+    return file.path; 
   }
 
   static Future<void> _exportTableToSheet(

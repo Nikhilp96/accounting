@@ -199,7 +199,7 @@ class AnalyticsController extends GetxController {
         tempPerformance[shop]!.systemSales = sSystem;
         gCollected += sCollected;
 
-        double shopLeakage = sSystem - sCollected;
+        double shopLeakage = sCollected - sSystem;
         gLeakage += shopLeakage;
 
         // Expenses

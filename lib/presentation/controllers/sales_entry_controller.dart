@@ -65,6 +65,13 @@ class SalesEntryController extends GetxController {
   var rateOG = 0.0.obs;
   var rateEggsDozen = 0.0.obs;
   var ratePotaKaleji = 0.0.obs;
+  // --- ADD MORTALITY OBSERVABLES ---
+  var broilerDeadQty = 0.obs;
+  var broilerDeadWt = 0.0.obs;
+  var dpDeadQty = 0.obs;
+  var dpDeadWt = 0.0.obs;
+  var ogDeadQty = 0.obs;
+  var ogDeadWt = 0.0.obs;
 
   // --- Text Controllers for Edit Mode & Overrides ---
   final wtBroilerCtrl = TextEditingController();
@@ -84,6 +91,12 @@ class SalesEntryController extends GetxController {
   final wtPotaCtrl = TextEditingController();
   final qtyPotaCtrl = TextEditingController();
   final totalAmountCtrl = TextEditingController();
+  final qtyBroilerDeadCtrl = TextEditingController();
+  final wtBroilerDeadCtrl = TextEditingController();
+  final qtyDPDeadCtrl = TextEditingController();
+  final wtDPDeadCtrl = TextEditingController();
+  final qtyOGDeadCtrl = TextEditingController();
+  final wtOGDeadCtrl = TextEditingController();
 
   final rateBroilerCtrl = TextEditingController();
   final rateMuttonCtrl = TextEditingController();
@@ -158,6 +171,20 @@ class SalesEntryController extends GetxController {
       if (potaKalejiQty.value > 0) {
         qtyPotaCtrl.text = potaKalejiQty.value.toString();
       }
+
+      broilerDeadQty.value = editData!.broilerDeadQty;
+      broilerDeadWt.value = editData!.broilerDeadWt;
+      dpDeadQty.value = editData!.dpDeadQty;
+      dpDeadWt.value = editData!.dpDeadWt;
+      ogDeadQty.value = editData!.ogDeadQty;
+      ogDeadWt.value = editData!.ogDeadWt;
+      
+      if (broilerDeadQty.value > 0) qtyBroilerDeadCtrl.text = broilerDeadQty.value.toString();
+      if (broilerDeadWt.value > 0) wtBroilerDeadCtrl.text = broilerDeadWt.value.toString();
+      if (dpDeadQty.value > 0) qtyDPDeadCtrl.text = dpDeadQty.value.toString();
+      if (dpDeadWt.value > 0) wtDPDeadCtrl.text = dpDeadWt.value.toString();
+      if (ogDeadQty.value > 0) qtyOGDeadCtrl.text = ogDeadQty.value.toString();
+      if (ogDeadWt.value > 0) wtOGDeadCtrl.text = ogDeadWt.value.toString();
       userTotalAmount.value = editData!.totalAmount;
 
       muttonOpeningWt.value = editData!.muttonOpeningWt;
@@ -244,6 +271,12 @@ class SalesEntryController extends GetxController {
       sellingAmount: calculatedSellingAmount, // Safely stores hard math
       totalAmount: userTotalAmount.value,
       difference: differenceAmount,
+      broilerDeadQty: broilerDeadQty.value,
+      broilerDeadWt: broilerDeadWt.value,
+      dpDeadQty: dpDeadQty.value,
+      dpDeadWt: dpDeadWt.value,
+      ogDeadQty: ogDeadQty.value,
+      ogDeadWt: ogDeadWt.value,
     );
 
     if (editData != null) {
@@ -297,6 +330,13 @@ class SalesEntryController extends GetxController {
     totalAmountCtrl.clear();
     wtMuttonOpeningCtrl.clear();
     wtMuttonClosingCtrl.clear();
+
+    broilerDeadQty.value = 0; broilerDeadWt.value = 0.0;
+    dpDeadQty.value = 0; dpDeadWt.value = 0.0;
+    ogDeadQty.value = 0; ogDeadWt.value = 0.0;
+    qtyBroilerDeadCtrl.clear(); wtBroilerDeadCtrl.clear();
+    qtyDPDeadCtrl.clear(); wtDPDeadCtrl.clear();
+    qtyOGDeadCtrl.clear(); wtOGDeadCtrl.clear();
 
     // (Notice we DO NOT reset the rate fields, as those stay cached for convenience!)
   }

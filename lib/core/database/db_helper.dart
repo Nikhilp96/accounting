@@ -5,7 +5,7 @@ import 'package:path/path.dart';
 
 class DatabaseHelper {
   static const String _databaseName = "shop_accounting.db";
-  static const int _databaseVersion = 4;
+  static const int _databaseVersion = 5;
 
   // Table Names
   static const String tableTraders = 'traders';
@@ -15,6 +15,7 @@ class DatabaseHelper {
   static const String tableStock = 'stock';
   static const String tableExpenses = 'expenses';
   static const String tableTraderPayments = 'trader_payments';
+  static const String tableExpenseCategories = 'expense_categories';
 
   DatabaseHelper._privateConstructor();
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
@@ -79,14 +80,20 @@ class DatabaseHelper {
         date TEXT NOT NULL,
         broiler_qty INTEGER NOT NULL DEFAULT 0,
         broiler_wt REAL NOT NULL,
+        broiler_dead_qty INTEGER NOT NULL DEFAULT 0,
+        broiler_dead_wt REAL NOT NULL DEFAULT 0.0,
         mutton_opening_wt REAL DEFAULT 0.0,
         mutton_closing_wt REAL DEFAULT 0.0,
         mutton_qty INTEGER NOT NULL DEFAULT 0,
         mutton_wt REAL NOT NULL,
         dp_qty INTEGER NOT NULL DEFAULT 0,
         dp_wt REAL NOT NULL,
+        dp_dead_qty INTEGER NOT NULL DEFAULT 0,
+        dp_dead_wt REAL NOT NULL DEFAULT 0.0,
         og_qty INTEGER NOT NULL DEFAULT 0,
         og_wt REAL NOT NULL,
+        og_dead_qty INTEGER NOT NULL DEFAULT 0,
+        og_dead_wt REAL NOT NULL DEFAULT 0.0,
         egg_qty INTEGER NOT NULL,
         pota_kaleji_qty INTEGER NOT NULL DEFAULT 0,
         pota_kaleji_wt REAL NOT NULL,
@@ -133,6 +140,14 @@ class DatabaseHelper {
       )
     ''');
 
+    await db.execute('''
+    CREATE TABLE $tableExpenseCategories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      is_salary INTEGER NOT NULL DEFAULT 0
+    )
+  ''');
+
     // --- SEED INITIAL DATA ---
     final batch = db.batch();
     batch.insert(tableTraders, {'name': 'Golden', 'category': 'Broiler'});
@@ -147,6 +162,24 @@ class DatabaseHelper {
     batch.insert(tableRates, {'item_name': 'OG', 'rate': 530.0});
     batch.insert(tableRates, {'item_name': 'Eggs', 'rate': 80.0});
     batch.insert(tableRates, {'item_name': 'Pota Kalegi', 'rate': 200.0});
+
+    List<String> defaultCats = [
+      'चहा',
+      'नाश्ता',
+      'दाणा',
+      'पिशवी',
+      'पाणी',
+      'Light Bill',
+      'Waste Tax',
+      'Rent',
+      'Labor',
+      'Labor food',
+      'Self',
+      'Other',
+    ];
+    for (var cat in defaultCats) {
+      batch.insert(tableExpenseCategories, {'name': cat, 'is_salary': 0});
+    }
 
     await batch.commit();
   }
@@ -200,11 +233,72 @@ class DatabaseHelper {
     }
 
     if (oldVersion < 4) {
-      await db.execute('ALTER TABLE $tableSales ADD COLUMN broiler_qty INTEGER NOT NULL DEFAULT 0');
-      await db.execute('ALTER TABLE $tableSales ADD COLUMN mutton_qty INTEGER NOT NULL DEFAULT 0');
-      await db.execute('ALTER TABLE $tableSales ADD COLUMN dp_qty INTEGER NOT NULL DEFAULT 0');
-      await db.execute('ALTER TABLE $tableSales ADD COLUMN og_qty INTEGER NOT NULL DEFAULT 0');
-      await db.execute('ALTER TABLE $tableSales ADD COLUMN pota_kaleji_qty INTEGER NOT NULL DEFAULT 0');
+      await db.execute(
+        'ALTER TABLE $tableSales ADD COLUMN broiler_qty INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE $tableSales ADD COLUMN mutton_qty INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE $tableSales ADD COLUMN dp_qty INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE $tableSales ADD COLUMN og_qty INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE $tableSales ADD COLUMN pota_kaleji_qty INTEGER NOT NULL DEFAULT 0',
+      );
+    }
+
+    if (oldVersion < 5) {
+      await db.execute('''
+      CREATE TABLE IF NOT EXISTS $tableExpenseCategories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        is_salary INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+      List<String> defaultCats = [
+        'चहा',
+        'नाश्ता',
+        'दाणा',
+        'पिशवी',
+        'पाणी',
+        'Light Bill',
+        'Waste Tax',
+        'Rent',
+        'Labor',
+        'Labor food',
+        'Self',
+        'Other',
+      ];
+      for (var cat in defaultCats) {
+        try {
+          await db.insert(tableExpenseCategories, {
+            'name': cat,
+            'is_salary': 0,
+          });
+        } catch (e) {} // Ignores if it already exists
+      }
+
+      await db.execute(
+        'ALTER TABLE $tableSales ADD COLUMN broiler_dead_qty INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE $tableSales ADD COLUMN broiler_dead_wt REAL NOT NULL DEFAULT 0.0',
+      );
+      await db.execute(
+        'ALTER TABLE $tableSales ADD COLUMN dp_dead_qty INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE $tableSales ADD COLUMN dp_dead_wt REAL NOT NULL DEFAULT 0.0',
+      );
+      await db.execute(
+        'ALTER TABLE $tableSales ADD COLUMN og_dead_qty INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE $tableSales ADD COLUMN og_dead_wt REAL NOT NULL DEFAULT 0.0',
+      );
     }
   }
 }

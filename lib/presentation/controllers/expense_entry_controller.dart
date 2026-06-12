@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import '../../data/models/app_models.dart';
 import '../../data/repositories/repositories.dart';
 
-// Helper class without the notes controller
 class ExpenseRowData {
   final RxString selectedCategory;
   final TextEditingController amountController;
@@ -33,32 +32,30 @@ class ExpenseEntryController extends GetxController {
   }
 
   final ExpenseRepository _expenseRepo = ExpenseRepository();
-  bool get isEditMode => editData != null;
+  final ExpenseCategoryRepository _catRepo = ExpenseCategoryRepository();
 
+  bool get isEditMode => editData != null;
+  var isReady = false.obs; // Tracks if DB categories are loaded
   var date = DateTime.now().obs;
 
-  final List<String> categories = [
-    'चहा',
-    'नाश्ता',
-    'दाणा',
-    'पिशवी',
-    'पाणी',
-    'Light Bill',
-    'Waste Tax',
-    'Rent',
-    'Labor',
-    'Labor food',
-    'Self',
-    'Other',
-  ];
-
+  var categoryNames = <String>[].obs;
   var expenseRows = <ExpenseRowData>[].obs;
 
   @override
   void onInit() {
     super.onInit();
+    _initData();
+  }
+
+  Future<void> _initData() async {
+    await loadCategories();
+
     if (isEditMode) {
       date.value = DateTime.parse(editData!.date);
+      // Auto-add category if it somehow doesn't exist in DB
+      if (!categoryNames.contains(editData!.category)) {
+        await addCustomCategory(editData!.category, false);
+      }
       expenseRows.add(
         ExpenseRowData(
           initialCategory: editData!.category,
@@ -68,18 +65,39 @@ class ExpenseEntryController extends GetxController {
     } else {
       addRow();
     }
+    isReady.value = true;
   }
 
-  @override
-  void onClose() {
-    for (var row in expenseRows) {
-      row.dispose();
+  Future<void> loadCategories() async {
+    final cats = await _catRepo.getAllCategories();
+    categoryNames.value = cats.map((e) => e.name).toList();
+  }
+
+  Future<void> addCustomCategory(String name, bool isSalary) async {
+    if (name.isEmpty) return;
+    if (categoryNames.contains(name)) {
+      Get.snackbar(
+        'Notice',
+        'Category already exists',
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+      return;
     }
-    super.onClose();
+    final newCat = ExpenseCategoryModel(name: name, isSalary: isSalary);
+    await _catRepo.addCategory(newCat);
+    await loadCategories();
+    Get.snackbar(
+      'Success',
+      'Category Saved',
+      backgroundColor: Colors.green.shade700,
+      colorText: Colors.white,
+    );
   }
 
   void addRow() {
-    expenseRows.add(ExpenseRowData(initialCategory: 'Other'));
+    String initCat = categoryNames.isNotEmpty ? categoryNames.first : '';
+    expenseRows.add(ExpenseRowData(initialCategory: initCat));
   }
 
   void removeRow(int index) {
@@ -96,14 +114,11 @@ class ExpenseEntryController extends GetxController {
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
-    if (picked != null) {
-      date.value = picked;
-    }
+    if (picked != null) date.value = picked;
   }
 
   Future<void> saveExpense() async {
     List<ExpenseModel> validExpensesToSave = [];
-
     for (var row in expenseRows) {
       double amount = double.tryParse(row.amountController.text) ?? 0.0;
       if (amount > 0) {
@@ -114,21 +129,13 @@ class ExpenseEntryController extends GetxController {
             date: date.value.toIso8601String(),
             category: row.selectedCategory.value,
             amount: amount,
-            notes: '', // Passed as empty string to satisfy the database model
+            notes: '',
           ),
         );
       }
     }
 
-    if (validExpensesToSave.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please enter at least one valid expense amount.',
-        backgroundColor: Colors.red.shade700,
-        colorText: Colors.white,
-      );
-      return;
-    }
+    if (validExpensesToSave.isEmpty) return;
 
     try {
       if (isEditMode) {
@@ -138,7 +145,6 @@ class ExpenseEntryController extends GetxController {
           await _expenseRepo.addExpense(exp);
         }
       }
-
       await BackupService.exportToExcel();
       Get.back();
       Get.snackbar(
@@ -147,13 +153,6 @@ class ExpenseEntryController extends GetxController {
         backgroundColor: Colors.green.shade700,
         colorText: Colors.white,
       );
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to save expense',
-        backgroundColor: Colors.red.shade800,
-        colorText: Colors.white,
-      );
-    }
+    } catch (e) {}
   }
 }
