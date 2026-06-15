@@ -9,9 +9,12 @@ import '../../data/repositories/repositories.dart';
 class SettingsController extends GetxController {
   final RateRepository _rateRepo = Get.find<RateRepository>();
   final TraderRepository _traderRepo = Get.find<TraderRepository>();
+  final ExpenseCategoryRepository _catRepo =
+      Get.find<ExpenseCategoryRepository>();
 
   var rates = <RateModel>[].obs;
   var traders = <TraderModel>[].obs;
+  var expenseCategories = <ExpenseCategoryModel>[].obs;
 
   @override
   void onInit() {
@@ -22,6 +25,7 @@ class SettingsController extends GetxController {
   Future<void> loadData() async {
     rates.value = await _rateRepo.getAllRates();
     traders.value = await _traderRepo.getAllTraders();
+    expenseCategories.value = await _catRepo.getAllCategories();
   }
 
   Future<void> updateRate(String itemName, double newRate) async {
@@ -58,6 +62,75 @@ class SettingsController extends GetxController {
     }
   }
 
+  // --- Expense Category Management ---
+  Future<void> addExpenseCategory(String name, {bool isSalary = false}) async {
+    try {
+      await _catRepo.addCategory(
+        ExpenseCategoryModel(name: name, isSalary: isSalary),
+      );
+      BackupManager.instance.scheduleBackup();
+      loadData();
+      Get.snackbar(
+        'Added',
+        'Category "$name" added successfully.',
+        backgroundColor: Colors.green.shade700,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to add category: $e',
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  Future<void> updateExpenseCategory(ExpenseCategoryModel category) async {
+    try {
+      await _catRepo.updateCategory(category);
+      BackupManager.instance.scheduleBackup();
+      loadData();
+      Get.snackbar(
+        'Updated',
+        'Category updated successfully.',
+        backgroundColor: Colors.green.shade700,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to update category: $e',
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  Future<void> deleteExpenseCategory(int id) async {
+    try {
+      await _catRepo.deleteCategory(id);
+      BackupManager.instance.scheduleBackup();
+      loadData();
+      Get.snackbar(
+        'Deleted',
+        'Category removed.',
+        backgroundColor: Colors.red.shade700,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to delete category: $e',
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
   var isRestoring = false.obs;
 
   Future<void> triggerRestore() async {
@@ -66,9 +139,7 @@ class SettingsController extends GetxController {
     bool success = await BackupService.restoreFromExcel();
 
     if (success) {
-      // Invalidate all caches after full restore
       AppCache.instance.invalidateAll();
-      // Reload UI data to reflect the restored database
       await loadData();
       Get.snackbar(
         'Restore Successful',

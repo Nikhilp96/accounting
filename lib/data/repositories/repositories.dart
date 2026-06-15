@@ -321,4 +321,23 @@ class ExpenseCategoryRepository {
     );
     return maps.map((e) => ExpenseCategoryModel.fromMap(e)).toList();
   }
+
+  Future<int> updateCategory(ExpenseCategoryModel category) async {
+    final db = await dbHelper.database;
+    return await db.update(
+      DatabaseHelper.tableExpenseCategories,
+      category.toMap(),
+      where: 'id = ?',
+      whereArgs: [category.id],
+    );
+  }
+
+  Future<int> deleteCategory(int id) async {
+    final db = await dbHelper.database;
+    return await db.delete(
+      DatabaseHelper.tableExpenseCategories,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
 }
