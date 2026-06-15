@@ -57,7 +57,14 @@ class ReportsPage extends StatelessWidget {
               // --- Summary Dashboard ---
               _buildAnalysisCard(controller),
               _buildTraderPayablesCard(controller),
-              _buildBirdsEyeView(controller),
+              Obx(() {
+                // Touch reactive lists so GetX tracks the dependency
+                controller.purchasesList.length;
+                controller.salesList.length;
+                controller.transfersList.length;
+                controller.stockMap.length;
+                return _buildBirdsEyeView(controller);
+              }),
               const SizedBox(height: 16),
 
               // --- Segmented Tab Toggle ---
@@ -96,7 +103,7 @@ class ReportsPage extends StatelessWidget {
                       _buildMortalityTable(controller.salesList),
                     ],
                   );
-                } else {
+                } else if (controller.activeTab.value == 'Expenses') {
                   if (controller.expensesList.isEmpty) {
                     return _buildEmptyState(
                       'No expenses in this period.',
@@ -104,6 +111,14 @@ class ReportsPage extends StatelessWidget {
                     );
                   }
                   return _buildExpensesTable(controller.expensesList);
+                } else {
+                  // if (controller.transfersList.isEmpty) {
+                  //   return _buildEmptyState(
+                  //     'No transfer in this period.',
+                  //     Icons.no_transfer_outlined,
+                  //   );
+                  // }
+                  return _buildTransfersTable(controller);
                 }
               }),
             ],
@@ -240,6 +255,7 @@ class ReportsPage extends StatelessWidget {
           Expanded(child: _buildTabButton('Purchases', controller)),
           Expanded(child: _buildTabButton('Sales', controller)),
           Expanded(child: _buildTabButton('Expenses', controller)),
+          Expanded(child: _buildTabButton('Transfers', controller)),
         ],
       ),
     );
@@ -468,119 +484,144 @@ class ReportsPage extends StatelessWidget {
 
   // --- Bird's Eye View Card ---
   Widget _buildBirdsEyeView(ReportsController controller) {
-    return Obx(() {
-      final data = controller.birdsEyeView;
-      return Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        elevation: 2,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: ExpansionTile(
-          initiallyExpanded: false,
-          leading: CircleAvatar(
-            backgroundColor: Colors.teal.shade50,
-            child: const Icon(Icons.visibility_outlined, color: Colors.teal),
+    final view = controller.birdsEyeView;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      elevation: 2,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ExpansionTile(
+        initiallyExpanded: false,
+        leading: CircleAvatar(
+          backgroundColor: Colors.blueGrey.shade50,
+          child: Icon(
+            Icons.inventory_2_outlined,
+            color: Colors.blueGrey.shade700,
           ),
-          title: const Text(
-            'Weekly Bird\'s Eye View (kg)',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.teal,
-            ),
+        ),
+        title: Text(
+          'Stock Reconciliation',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.blueGrey.shade800,
           ),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
-                children: [
-                  const Divider(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Row(
+        ),
+        subtitle: Text(
+          'Broiler Diff: ${view['Broiler']!['Difference']!.toStringAsFixed(1)} kg',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: view['Broiler']!['Difference']! >= 0
+                ? Colors.green.shade700
+                : Colors.red.shade700,
+            fontSize: 13,
+          ),
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: constraints.maxWidth < 650
+                        ? 650
+                        : constraints.maxWidth,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Expanded(
-                          flex: 3,
-                          child: Padding(
-                            padding: EdgeInsets.only(left: 8.0),
-                            child: Text(
-                              'Item',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: Padding(
+                                  padding: EdgeInsets.only(left: 8.0),
+                                  child: Text(
+                                    'Item',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  'Pur',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  'Tr-In',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  'Sales',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  'Tr-Out',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  'Dead',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Padding(
+                                  padding: EdgeInsets.only(right: 8.0),
+                                  child: Text(
+                                    'Diff',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold),
+                                    textAlign: TextAlign.right,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Expanded(
-                          flex: 2,
-                          child: Text(
-                            'Pur',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Text(
-                            'Sales',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Text(
-                            'Dead',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Padding(
-                            padding: EdgeInsets.only(right: 8.0),
-                            child: Text(
-                              'Diff',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                              textAlign: TextAlign.right,
-                            ),
-                          ),
-                        ),
+                        const SizedBox(height: 8),
+                        _buildBirdRow('Broiler', view['Broiler']!),
+                        const Divider(height: 1),
+                        _buildBirdRow('Desi DP', view['DP']!),
+                        const Divider(height: 1),
+                        _buildBirdRow('Desi OG', view['OG']!),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  _buildBirdRow('Broiler', data['Broiler']!),
-                  _buildBirdRow('DP', data['DP']!),
-                  _buildBirdRow('OG', data['OG']!),
-                ],
-              ),
+                );
+              },
             ),
-          ],
-        ),
-      );
-    });
-  }
-
-  // Helper for Summary Rows
-  Widget _buildSummaryRow(String title, double amount, Color amountColor) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade800,
           ),
-        ),
-        Text(
-          '₹${amount.toStringAsFixed(2)}',
-          style: TextStyle(color: amountColor, fontWeight: FontWeight.w600),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -593,7 +634,7 @@ class ReportsPage extends StatelessWidget {
               : Colors.black54);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Row(
         children: [
           Expanded(
@@ -616,8 +657,24 @@ class ReportsPage extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
+              values['TrIn']!.toStringAsFixed(1),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.blue.shade700),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
               values['Sales']!.toStringAsFixed(1),
               textAlign: TextAlign.center,
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              values['TrOut']!.toStringAsFixed(1),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.orange.shade700),
             ),
           ),
           Expanded(
@@ -644,6 +701,26 @@ class ReportsPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  // Helper for Summary Rows
+  Widget _buildSummaryRow(String title, double amount, Color amountColor) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade800,
+          ),
+        ),
+        Text(
+          '₹${amount.toStringAsFixed(2)}',
+          style: TextStyle(color: amountColor, fontWeight: FontWeight.w600),
+        ),
+      ],
     );
   }
 
@@ -899,7 +976,10 @@ class ReportsPage extends StatelessWidget {
         DataCell(
           Obx(
             () => Text(
-              (totalWt1 + (controller.stockMap['Opening_${title}_Wt1'] ?? 0.0) - (controller.stockMap['Closing_${title}_Wt1'] ?? 0.0)).toStringAsFixed(2),
+              (totalWt1 +
+                      (controller.stockMap['Opening_${title}_Wt1'] ?? 0.0) -
+                      (controller.stockMap['Closing_${title}_Wt1'] ?? 0.0))
+                  .toStringAsFixed(2),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
           ),
@@ -907,7 +987,10 @@ class ReportsPage extends StatelessWidget {
         DataCell(
           Obx(
             () => Text(
-              (totalWt2 + (controller.stockMap['Opening_${title}_Wt2'] ?? 0.0) - (controller.stockMap['Closing_${title}_Wt2'] ?? 0.0)).toStringAsFixed(2),
+              (totalWt2 +
+                      (controller.stockMap['Opening_${title}_Wt2'] ?? 0.0) -
+                      (controller.stockMap['Closing_${title}_Wt2'] ?? 0.0))
+                  .toStringAsFixed(2),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
           ),
@@ -1355,38 +1438,57 @@ class ReportsPage extends StatelessWidget {
   // --- MORTALITY DATATABLE ---
   Widget _buildMortalityTable(List<SaleModel> data) {
     // Check if there's any mortality data at all
-    bool hasMortality = data.any((s) =>
-        s.broilerDeadQty > 0 ||
-        s.broilerDeadWt > 0 ||
-        s.dpDeadQty > 0 ||
-        s.dpDeadWt > 0 ||
-        s.ogDeadQty > 0 ||
-        s.ogDeadWt > 0);
+    bool hasMortality = data.any(
+      (s) =>
+          s.broilerDeadQty > 0 ||
+          s.broilerDeadWt > 0 ||
+          s.dpDeadQty > 0 ||
+          s.dpDeadWt > 0 ||
+          s.ogDeadQty > 0 ||
+          s.ogDeadWt > 0,
+    );
 
     if (!hasMortality) return const SizedBox.shrink();
 
-    List<DataRow> rows = data.where((s) =>
-        s.broilerDeadQty > 0 ||
-        s.broilerDeadWt > 0 ||
-        s.dpDeadQty > 0 ||
-        s.dpDeadWt > 0 ||
-        s.ogDeadQty > 0 ||
-        s.ogDeadWt > 0).map((sale) {
-      return DataRow(
-        cells: [
-          DataCell(Text(DateUtil.formatIso(sale.date))),
-          DataCell(Text(sale.broilerDeadQty > 0
-              ? '${sale.broilerDeadQty} / ${sale.broilerDeadWt.toStringAsFixed(2)}'
-              : '-')),
-          DataCell(Text(sale.dpDeadQty > 0
-              ? '${sale.dpDeadQty} / ${sale.dpDeadWt.toStringAsFixed(2)}'
-              : '-')),
-          DataCell(Text(sale.ogDeadQty > 0
-              ? '${sale.ogDeadQty} / ${sale.ogDeadWt.toStringAsFixed(2)}'
-              : '-')),
-        ],
-      );
-    }).toList();
+    List<DataRow> rows = data
+        .where(
+          (s) =>
+              s.broilerDeadQty > 0 ||
+              s.broilerDeadWt > 0 ||
+              s.dpDeadQty > 0 ||
+              s.dpDeadWt > 0 ||
+              s.ogDeadQty > 0 ||
+              s.ogDeadWt > 0,
+        )
+        .map((sale) {
+          return DataRow(
+            cells: [
+              DataCell(Text(DateUtil.formatIso(sale.date))),
+              DataCell(
+                Text(
+                  sale.broilerDeadQty > 0
+                      ? '${sale.broilerDeadQty} / ${sale.broilerDeadWt.toStringAsFixed(2)}'
+                      : '-',
+                ),
+              ),
+              DataCell(
+                Text(
+                  sale.dpDeadQty > 0
+                      ? '${sale.dpDeadQty} / ${sale.dpDeadWt.toStringAsFixed(2)}'
+                      : '-',
+                ),
+              ),
+              DataCell(
+                Text(
+                  sale.ogDeadQty > 0
+                      ? '${sale.ogDeadQty} / ${sale.ogDeadWt.toStringAsFixed(2)}'
+                      : '-',
+                ),
+              ),
+            ],
+          );
+        })
+        .toList();
 
     // Totals row
     int totBroilerDeadQty = data.fold(0, (sum, s) => sum + s.broilerDeadQty);
@@ -1401,20 +1503,29 @@ class ReportsPage extends StatelessWidget {
         color: WidgetStateProperty.all(Colors.red.shade50),
         cells: [
           const DataCell(
-            Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            Text(
+              'TOTAL',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
           ),
-          DataCell(Text(
-            '$totBroilerDeadQty / ${totBroilerDeadWt.toStringAsFixed(2)}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          )),
-          DataCell(Text(
-            '$totDpDeadQty / ${totDpDeadWt.toStringAsFixed(2)}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          )),
-          DataCell(Text(
-            '$totOgDeadQty / ${totOgDeadWt.toStringAsFixed(2)}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          )),
+          DataCell(
+            Text(
+              '$totBroilerDeadQty / ${totBroilerDeadWt.toStringAsFixed(2)}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          DataCell(
+            Text(
+              '$totDpDeadQty / ${totDpDeadWt.toStringAsFixed(2)}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          DataCell(
+            Text(
+              '$totOgDeadQty / ${totOgDeadWt.toStringAsFixed(2)}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
         ],
       ),
     );
@@ -1441,7 +1552,11 @@ class ReportsPage extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             child: Row(
               children: [
-                Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 20),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.red.shade700,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Mortality / Dead Stock',
@@ -1463,16 +1578,28 @@ class ReportsPage extends StatelessWidget {
               columnSpacing: 24,
               columns: const [
                 DataColumn(
-                  label: Text('Date', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: Text(
+                    'Date',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 DataColumn(
-                  label: Text('Broiler\n(Q / Wt)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: Text(
+                    'Broiler\n(Q / Wt)',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 DataColumn(
-                  label: Text('DP\n(Q / Wt)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: Text(
+                    'DP\n(Q / Wt)',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 DataColumn(
-                  label: Text('OG\n(Q / Wt)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: Text(
+                    'OG\n(Q / Wt)',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
               rows: rows,
@@ -1647,6 +1774,110 @@ class ReportsPage extends StatelessWidget {
         Get.back();
         onConfirm();
       },
+    );
+  }
+
+  // --- 5. TRANSFERS TABLE ---
+  Widget _buildTransfersTable(ReportsController controller) {
+    if (controller.transfersList.isEmpty) {
+      return const Center(child: Text('No stock transfers logged.'));
+    }
+
+    List<DataRow> rows = controller.transfersList.map((transfer) {
+      bool isOut = transfer.fromShop == controller.shopCode;
+      return DataRow(
+        cells: [
+          DataCell(Text(DateUtil.formatIso(transfer.date))),
+          DataCell(
+            Text(
+              isOut ? 'To ${transfer.toShop}' : 'From ${transfer.fromShop}',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: isOut ? Colors.red.shade700 : Colors.green.shade700,
+              ),
+            ),
+          ),
+          DataCell(Text(transfer.itemType)),
+          DataCell(
+            Text(
+              '${transfer.qty.toStringAsFixed(2)} / ${(transfer.weight1 + transfer.weight2).toStringAsFixed(1)} kg',
+            ),
+          ),
+          DataCell(
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    color: Colors.blue.shade700,
+                    size: 20,
+                  ),
+                  onPressed: () => controller.editTransfer(transfer),
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.all(4),
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: Colors.red.shade700,
+                    size: 20,
+                  ),
+                  onPressed: () => _confirmDelete(
+                    Get.context!,
+                    () => controller.deleteTransferRecord(transfer.id!),
+                  ),
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.all(4),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }).toList();
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.vertical,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          headingRowColor: WidgetStateProperty.all(Colors.grey.shade200),
+          columns: const [
+            DataColumn(
+              label: Text(
+                'Date',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'Direction',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'Item',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'Qty / Weight',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            DataColumn(
+              label: Text(
+                'Action',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+          rows: rows,
+        ),
+      ),
     );
   }
 }

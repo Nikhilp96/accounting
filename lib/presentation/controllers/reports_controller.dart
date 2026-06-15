@@ -15,6 +15,8 @@ class ReportsController extends GetxController {
   final SalesRepository _salesRepo = Get.find<SalesRepository>();
   final StockRepository _stockRepo = Get.find<StockRepository>();
   final ExpenseRepository _expenseRepo = Get.find<ExpenseRepository>();
+  final TransferRepository _transferRepo = Get.find<TransferRepository>();
+  var transfersList = <TransferModel>[].obs;
 
   var viewMode = 'Weekly'.obs;
   var activeTab = 'Purchases'.obs;
@@ -92,6 +94,11 @@ class ReportsController extends GetxController {
       purchasesList.value = results[0] as List<PurchaseModel>;
       salesList.value = results[1] as List<SaleModel>;
       expensesList.value = results[2] as List<ExpenseModel>;
+      transfersList.value = await _transferRepo.getTransfersByDateRange(
+        shopCode,
+        startIso,
+        endIso,
+      );
       // Stock data is applied within _loadStockData directly to stockMap
     } finally {
       isLoading.value = false;
@@ -253,15 +260,31 @@ class ReportsController extends GetxController {
     Map<String, Map<String, double>> summary = {
       'Broiler': {
         'Purchase': 0.0,
+        'TrIn': 0.0,
         'Sales': 0.0,
+        'TrOut': 0.0,
         'Dead': 0.0,
         'Difference': 0.0,
       },
-      'DP': {'Purchase': 0.0, 'Sales': 0.0, 'Dead': 0.0, 'Difference': 0.0},
-      'OG': {'Purchase': 0.0, 'Sales': 0.0, 'Dead': 0.0, 'Difference': 0.0},
+      'DP': {
+        'Purchase': 0.0,
+        'TrIn': 0.0,
+        'Sales': 0.0,
+        'TrOut': 0.0,
+        'Dead': 0.0,
+        'Difference': 0.0,
+      },
+      'OG': {
+        'Purchase': 0.0,
+        'TrIn': 0.0,
+        'Sales': 0.0,
+        'TrOut': 0.0,
+        'Dead': 0.0,
+        'Difference': 0.0,
+      },
     };
 
-    // 1. Calculate Purchases (Actual Consumption = Pur + Open - Close)
+    // 1. Base Purchases (Pur + Open - Close)
     double bPur1 = purchasesList
         .where((p) => p.itemType == 'Broiler')
         .fold(0.0, (s, p) => s + (p.weight1 ?? 0.0));
@@ -292,34 +315,77 @@ class ReportsController extends GetxController {
         (stockMap['Opening_Desi_Wt2'] ?? 0.0) -
         (stockMap['Closing_Desi_Wt2'] ?? 0.0));
 
-    // 2. Calculate Actual Sales & Mortality
+    // 2. Transfers In
+    summary['Broiler']!['TrIn'] = transfersList
+        .where((t) => t.toShop == shopCode && t.itemType == 'Broiler')
+        .fold(0.0, (s, t) => s + t.weight1 + t.weight2);
+    summary['DP']!['TrIn'] = transfersList
+        .where((t) => t.toShop == shopCode && t.itemType == 'DP')
+        .fold(0.0, (s, t) => s + t.weight1);
+    summary['OG']!['TrIn'] = transfersList
+        .where((t) => t.toShop == shopCode && t.itemType == 'OG')
+        .fold(0.0, (s, t) => s + t.weight1);
+
+    // 3. Transfers Out
+    summary['Broiler']!['TrOut'] = transfersList
+        .where((t) => t.fromShop == shopCode && t.itemType == 'Broiler')
+        .fold(0.0, (s, t) => s + t.weight1 + t.weight2);
+    summary['DP']!['TrOut'] = transfersList
+        .where((t) => t.fromShop == shopCode && t.itemType == 'DP')
+        .fold(0.0, (s, t) => s + t.weight1);
+    summary['OG']!['TrOut'] = transfersList
+        .where((t) => t.fromShop == shopCode && t.itemType == 'OG')
+        .fold(0.0, (s, t) => s + t.weight1);
+
+    // 4. Sales
     double totalBroilerSales = salesList.fold(0.0, (s, i) => s + i.broilerWt);
     double totalMuttonSales = salesList.fold(0.0, (s, i) => s + i.muttonWt);
     summary['Broiler']!['Sales'] = totalBroilerSales + totalMuttonSales;
+    summary['DP']!['Sales'] = salesList.fold(0.0, (s, i) => s + i.dpWt);
+    summary['OG']!['Sales'] = salesList.fold(0.0, (s, i) => s + i.ogWt);
+
+    // 5. Dead Birds
     summary['Broiler']!['Dead'] = salesList.fold(
       0.0,
       (s, i) => s + i.broilerDeadWt,
     );
-
-    summary['DP']!['Sales'] = salesList.fold(0.0, (s, i) => s + i.dpWt);
     summary['DP']!['Dead'] = salesList.fold(0.0, (s, i) => s + i.dpDeadWt);
-
-    summary['OG']!['Sales'] = salesList.fold(0.0, (s, i) => s + i.ogWt);
     summary['OG']!['Dead'] = salesList.fold(0.0, (s, i) => s + i.ogDeadWt);
 
-    // 3. Difference Formula: (Actual Sales + Dead) - Total Purchase
-    // Positive difference = Surplus. Negative difference = Shortage/Leakage.
+    // 6. Perfect Difference Formula:  (Sales + TrOut + Dead) - (Purchase + TrIn)
     summary['Broiler']!['Difference'] =
-        (summary['Broiler']!['Sales']! + summary['Broiler']!['Dead']!) -
-        summary['Broiler']!['Purchase']!;
+        (summary['Broiler']!['Sales']! +
+            summary['Broiler']!['TrOut']! +
+            summary['Broiler']!['Dead']!) -
+        (summary['Broiler']!['Purchase']! + summary['Broiler']!['TrIn']!);
     summary['DP']!['Difference'] =
-        (summary['DP']!['Sales']! + summary['DP']!['Dead']!) -
-        summary['DP']!['Purchase']!;
+        (summary['DP']!['Sales']! +
+            summary['DP']!['TrOut']! +
+            summary['DP']!['Dead']!) -
+        (summary['DP']!['Purchase']! + summary['DP']!['TrIn']!);
     summary['OG']!['Difference'] =
-        (summary['OG']!['Sales']! + summary['OG']!['Dead']!) -
-        summary['OG']!['Purchase']!;
+        (summary['OG']!['Sales']! +
+            summary['OG']!['TrOut']! +
+            summary['OG']!['Dead']!) -
+        (summary['OG']!['Purchase']! + summary['OG']!['TrIn']!);
 
     return summary;
+  }
+
+  // Add deletion handler at the bottom of the controller
+  Future<void> deleteTransferRecord(int id) async {
+    await _transferRepo.deleteTransfer(id);
+    await BackupManager.instance.flushNow();
+    fetchData();
+  }
+
+  void editTransfer(TransferModel transfer) {
+    Get.toNamed(
+      Routes.TRANSFER_ENTRY,
+      arguments: {'transfer': transfer},
+    )?.then((_) {
+      fetchData();
+    });
   }
 
   // --- Trader Payables Calculation ---

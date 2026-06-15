@@ -338,3 +338,52 @@ class ExpenseCategoryModel {
     );
   }
 }
+
+// --- NEW STOCK TRANSFER MODEL ---
+class TransferModel {
+  final int? id;
+  final String date;
+  final String fromShop;
+  final String toShop;
+  final String itemType;
+  final double qty;
+  final double weight1;
+  final double weight2;
+
+  TransferModel({
+    this.id,
+    required this.date,
+    required this.fromShop,
+    required this.toShop,
+    required this.itemType,
+    required this.qty,
+    required this.weight1,
+    required this.weight2,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'date': date,
+      'from_shop': fromShop,
+      'to_shop': toShop,
+      'item_type': itemType,
+      'qty': qty,
+      'weight_1': weight1,
+      'weight_2': weight2,
+    };
+  }
+
+  factory TransferModel.fromMap(Map<String, dynamic> map) {
+    return TransferModel(
+      id: map['id'],
+      date: map['date'],
+      fromShop: map['from_shop'],
+      toShop: map['to_shop'],
+      itemType: map['item_type'],
+      qty: map['qty'] ?? 0.0,
+      weight1: map['weight_1'] ?? 0.0,
+      weight2: map['weight_2'] ?? 0.0,
+    );
+  }
+}

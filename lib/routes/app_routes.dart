@@ -6,4 +6,5 @@ abstract class Routes {
   static const String SALES_ENTRY = '/sales-entry';
   static const String REPORTS = '/reports';
   static const String EXPENSE_ENTRY = '/expense-entry';
+  static const String TRANSFER_ENTRY = '/transfer-entry';
 }

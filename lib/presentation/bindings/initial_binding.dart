@@ -18,6 +18,7 @@ class InitialBinding extends Bindings {
     Get.lazyPut(() => StockRepository(), fenix: true);
     Get.lazyPut(() => TraderPaymentRepository(), fenix: true);
     Get.lazyPut(() => ExpenseCategoryRepository(), fenix: true);
+    Get.lazyPut(() => TransferRepository(), fenix: true);
 
     // 3. App-Level Controllers
     Get.put(DashboardController()); // Use put() so it initializes immediately on launch

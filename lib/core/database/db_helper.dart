@@ -16,6 +16,7 @@ class DatabaseHelper {
   static const String tableExpenses = 'expenses';
   static const String tableTraderPayments = 'trader_payments';
   static const String tableExpenseCategories = 'expense_categories';
+  static const String tableTransfers = 'stock_transfers';
 
   DatabaseHelper._privateConstructor();
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
@@ -147,6 +148,14 @@ class DatabaseHelper {
       is_salary INTEGER NOT NULL DEFAULT 0
     )
   ''');
+
+    await db.execute('''
+      CREATE TABLE $tableTransfers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL, from_shop TEXT NOT NULL,
+        to_shop TEXT NOT NULL, item_type TEXT NOT NULL, qty REAL NOT NULL DEFAULT 0.0,
+        weight_1 REAL NOT NULL DEFAULT 0.0, weight_2 REAL NOT NULL DEFAULT 0.0
+      )
+    ''');
 
     // --- SEED INITIAL DATA ---
     final batch = db.batch();
@@ -335,6 +344,14 @@ class DatabaseHelper {
       await db.execute('''
         CREATE INDEX IF NOT EXISTS idx_trader_payments_date ON $tableTraderPayments (date)
       ''');
+
+      await db.execute('''
+      CREATE TABLE $tableTransfers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL, from_shop TEXT NOT NULL,
+        to_shop TEXT NOT NULL, item_type TEXT NOT NULL, qty REAL NOT NULL DEFAULT 0.0,
+        weight_1 REAL NOT NULL DEFAULT 0.0, weight_2 REAL NOT NULL DEFAULT 0.0
+      )
+    ''');
     }
   }
 }

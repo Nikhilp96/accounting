@@ -5,6 +5,7 @@ import 'package:accounting/presentation/pages/reports_page.dart';
 import 'package:accounting/presentation/pages/sales_entry_page.dart';
 import 'package:accounting/presentation/pages/settings_screen.dart';
 import 'package:accounting/presentation/pages/shop_home_page.dart';
+import 'package:accounting/presentation/pages/transfer_entry_page.dart';
 import 'package:get/get.dart';
 import 'app_routes.dart';
 
@@ -20,5 +21,9 @@ class AppPages {
     GetPage(name: Routes.SALES_ENTRY, page: () => const SalesEntryPage()),
     GetPage(name: Routes.REPORTS, page: () => const ReportsPage()),
     GetPage(name: Routes.EXPENSE_ENTRY, page: () => const ExpenseEntryPage()),
+    GetPage(
+      name: Routes.TRANSFER_ENTRY,
+      page: () => const TransferEntryPage(),
+    ),
   ];
 }

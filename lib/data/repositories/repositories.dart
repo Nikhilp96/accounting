@@ -322,3 +322,47 @@ class ExpenseCategoryRepository {
     return maps.map((e) => ExpenseCategoryModel.fromMap(e)).toList();
   }
 }
+
+// --- NEW REPOSITORY FOR TRANSFERS ---
+class TransferRepository {
+  final DatabaseHelper dbHelper = DatabaseHelper.instance;
+
+  Future<int> addTransfer(TransferModel transfer) async {
+    final db = await dbHelper.database;
+    return await db.insert(DatabaseHelper.tableTransfers, transfer.toMap());
+  }
+
+  Future<List<TransferModel>> getTransfersByDateRange(
+    String shopCode,
+    String startDate,
+    String endDate,
+  ) async {
+    final db = await dbHelper.database;
+    final maps = await db.query(
+      DatabaseHelper.tableTransfers,
+      where: '(from_shop = ? OR to_shop = ?) AND date >= ? AND date <= ?',
+      whereArgs: [shopCode, shopCode, startDate, endDate],
+      orderBy: 'date DESC',
+    );
+    return maps.map((e) => TransferModel.fromMap(e)).toList();
+  }
+
+  Future<int> deleteTransfer(int id) async {
+    final db = await dbHelper.database;
+    return await db.delete(
+      DatabaseHelper.tableTransfers,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> updateTransfer(TransferModel transfer) async {
+    final db = await dbHelper.database;
+    return await db.update(
+      DatabaseHelper.tableTransfers,
+      transfer.toMap(),
+      where: 'id = ?',
+      whereArgs: [transfer.id],
+    );
+  }
+}
