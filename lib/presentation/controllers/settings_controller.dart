@@ -1,12 +1,14 @@
+import 'package:accounting/core/utils/backup_manager.dart';
 import 'package:accounting/core/utils/backup_service.dart';
+import 'package:accounting/core/cache/app_cache.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/models/app_models.dart';
 import '../../data/repositories/repositories.dart';
 
 class SettingsController extends GetxController {
-  final RateRepository _rateRepo = RateRepository();
-  final TraderRepository _traderRepo = TraderRepository();
+  final RateRepository _rateRepo = Get.find<RateRepository>();
+  final TraderRepository _traderRepo = Get.find<TraderRepository>();
 
   var rates = <RateModel>[].obs;
   var traders = <TraderModel>[].obs;
@@ -23,15 +25,37 @@ class SettingsController extends GetxController {
   }
 
   Future<void> updateRate(String itemName, double newRate) async {
-    await _rateRepo.updateRate(itemName, newRate);
-    await BackupService.exportToExcel();
-    loadData();
+    try {
+      await _rateRepo.updateRate(itemName, newRate);
+      AppCache.instance.invalidateRates();
+      BackupManager.instance.scheduleBackup();
+      loadData();
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to update rate: $e',
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 
   Future<void> addTrader(String name, String category) async {
-    await _traderRepo.addTrader(TraderModel(name: name, category: category));
-    await BackupService.exportToExcel();
-    loadData();
+    try {
+      await _traderRepo.addTrader(TraderModel(name: name, category: category));
+      AppCache.instance.invalidateTraders();
+      BackupManager.instance.scheduleBackup();
+      loadData();
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to add trader: $e',
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 
   var isRestoring = false.obs;
@@ -42,6 +66,8 @@ class SettingsController extends GetxController {
     bool success = await BackupService.restoreFromExcel();
 
     if (success) {
+      // Invalidate all caches after full restore
+      AppCache.instance.invalidateAll();
       // Reload UI data to reflect the restored database
       await loadData();
       Get.snackbar(

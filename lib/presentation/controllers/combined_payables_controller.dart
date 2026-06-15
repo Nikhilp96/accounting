@@ -1,5 +1,6 @@
-import 'package:accounting/core/utils/backup_service.dart';
+import 'package:accounting/core/utils/backup_manager.dart';
 import 'package:accounting/core/utils/date_util.dart';
+import 'package:accounting/core/cache/app_cache.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/models/app_models.dart';
@@ -26,9 +27,8 @@ class PayableSummary {
 }
 
 class CombinedPayablesController extends GetxController {
-  final PurchaseRepository _purchaseRepo = PurchaseRepository();
-  final TraderPaymentRepository _paymentRepo = TraderPaymentRepository();
-  final TraderRepository _traderRepo = TraderRepository();
+  final PurchaseRepository _purchaseRepo = Get.find<PurchaseRepository>();
+  final TraderPaymentRepository _paymentRepo = Get.find<TraderPaymentRepository>();
 
   var isLoading = false.obs;
   var selectedDate = DateTime.now().obs;
@@ -67,25 +67,41 @@ class CombinedPayablesController extends GetxController {
   Future<void> fetchData() async {
     isLoading.value = true;
     try {
-      final traders = await _traderRepo.getAllTraders();
-      for (var t in traders) {
-        if (t.id != null) traderMap[t.id!] = t.name;
-      }
+      traderMap = await AppCache.instance.getTraderNameMap();
 
-      final purchases = await _purchaseRepo.getAllPurchases();
-      allPurchases.value = purchases;
-      allPayments.value = await _paymentRepo.getAllPayments();
+      // Only fetch purchases for the selected week (scoped query)
+      String startIso = _startDate.toIso8601String();
+      String endIso = _endDate.toIso8601String();
+
+      // Fetch purchases across all shops for the selected week
+      List<PurchaseModel> weekPurchases = [];
+      for (String shop in ['NK', 'NP', 'PT']) {
+        final shopPurchases = await _purchaseRepo.getPurchasesByDateRange(
+          shop,
+          startIso,
+          endIso,
+        );
+        weekPurchases.addAll(shopPurchases);
+      }
+      allPurchases.value = weekPurchases;
+
+      // Fetch payments for the following week only
+      DateTime nextWeekStart = _startDate.add(const Duration(days: 7));
+      DateTime nextWeekEnd = _endDate.add(const Duration(days: 7));
+      String nextStartIso = nextWeekStart.toIso8601String();
+      String nextEndIso = nextWeekEnd.toIso8601String();
+
+      allPayments.value = await _paymentRepo.getPaymentsByDateRange(
+        nextStartIso,
+        nextEndIso,
+      );
 
       Map<String, PayableSummary> summaryMap = {};
       String genKey(int? tId, String iType) =>
           tId != null ? 'T_$tId' : 'I_$iType';
 
-      // Offset dates for next week's payments
-      DateTime nextWeekStart = _startDate.add(const Duration(days: 7));
-      DateTime nextWeekEnd = _endDate.add(const Duration(days: 7));
-
       // 1. Process Purchases (For Selected Week)
-      for (var p in purchases) {
+      for (var p in weekPurchases) {
         String key = genKey(p.traderId, p.itemType);
         if (!summaryMap.containsKey(key)) {
           String name = p.traderId != null && traderMap.containsKey(p.traderId)
@@ -99,28 +115,15 @@ class CombinedPayablesController extends GetxController {
         }
 
         summaryMap[key]!.lifetimePurchases += p.amount;
-
-        DateTime pDate = DateTime.parse(p.date);
-        if (pDate.isAfter(_startDate.subtract(const Duration(seconds: 1))) &&
-            pDate.isBefore(_endDate.add(const Duration(seconds: 1)))) {
-          summaryMap[key]!.periodPurchases += p.amount;
-        }
+        summaryMap[key]!.periodPurchases += p.amount;
       }
 
-      // 2. Process Payments (For Next Week)
+      // 2. Process Payments (For Following Week)
       for (var pay in allPayments) {
         String key = genKey(pay.traderId, pay.itemType);
         if (summaryMap.containsKey(key)) {
           summaryMap[key]!.lifetimePayments += pay.amount;
-
-          DateTime payDate = DateTime.parse(pay.date);
-          // Check if payment was made in the following week cycle
-          if (payDate.isAfter(
-                nextWeekStart.subtract(const Duration(seconds: 1)),
-              ) &&
-              payDate.isBefore(nextWeekEnd.add(const Duration(seconds: 1)))) {
-            summaryMap[key]!.periodPayments += pay.amount;
-          }
+          summaryMap[key]!.periodPayments += pay.amount;
         }
       }
 
@@ -143,20 +146,40 @@ class CombinedPayablesController extends GetxController {
       amount: amount,
       notes: notes,
     );
-    await _paymentRepo.addPayment(payment);
-    await BackupService.exportToExcel();
-    fetchData();
-    Get.snackbar(
-      'Success',
-      'Payment saved successfully!',
-      backgroundColor: Colors.green.shade700,
-      colorText: Colors.white,
-    );
+    try {
+      await _paymentRepo.addPayment(payment);
+      BackupManager.instance.scheduleBackup();
+      fetchData();
+      Get.snackbar(
+        'Success',
+        'Payment saved successfully!',
+        backgroundColor: Colors.green.shade700,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to save payment: $e',
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 
   Future<void> deletePayment(int id) async {
-    await _paymentRepo.deletePayment(id);
-    await BackupService.exportToExcel();
-    fetchData();
+    try {
+      await _paymentRepo.deletePayment(id);
+      BackupManager.instance.scheduleBackup();
+      fetchData();
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to delete payment: $e',
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 }

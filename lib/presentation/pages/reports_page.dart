@@ -90,7 +90,12 @@ class ReportsPage extends StatelessWidget {
                       Icons.point_of_sale_outlined,
                     );
                   }
-                  return _buildSalesTable(controller.salesList);
+                  return Column(
+                    children: [
+                      _buildSalesTable(controller.salesList),
+                      _buildMortalityTable(controller.salesList),
+                    ],
+                  );
                 } else {
                   if (controller.expensesList.isEmpty) {
                     return _buildEmptyState(
@@ -580,11 +585,11 @@ class ReportsPage extends StatelessWidget {
   }
 
   Widget _buildBirdRow(String label, Map<String, double> values) {
-    // Diff > 0 means missing stock (Red). Diff < 0 means surplus (Green).
+    // Diff < 0 means missing stock (Red). Diff > 0 means surplus (Green).
     Color diffColor = values['Difference']! > 0.01
-        ? Colors.red.shade700
+        ? Colors.green.shade700
         : (values['Difference']! < -0.01
-              ? Colors.green.shade700
+              ? Colors.red.shade700
               : Colors.black54);
 
     return Padding(
@@ -894,7 +899,7 @@ class ReportsPage extends StatelessWidget {
         DataCell(
           Obx(
             () => Text(
-              '${(totalWt1 + (controller.stockMap['Opening_${title}_Wt1'] ?? 0.0) - (controller.stockMap['Closing_${title}_Wt1'] ?? 0.0)).toStringAsFixed(2)}',
+              (totalWt1 + (controller.stockMap['Opening_${title}_Wt1'] ?? 0.0) - (controller.stockMap['Closing_${title}_Wt1'] ?? 0.0)).toStringAsFixed(2),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
           ),
@@ -902,7 +907,7 @@ class ReportsPage extends StatelessWidget {
         DataCell(
           Obx(
             () => Text(
-              '${(totalWt2 + (controller.stockMap['Opening_${title}_Wt2'] ?? 0.0) - (controller.stockMap['Closing_${title}_Wt2'] ?? 0.0)).toStringAsFixed(2)}',
+              (totalWt2 + (controller.stockMap['Opening_${title}_Wt2'] ?? 0.0) - (controller.stockMap['Closing_${title}_Wt2'] ?? 0.0)).toStringAsFixed(2),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
           ),
@@ -1343,6 +1348,137 @@ class ReportsPage extends StatelessWidget {
           ],
           rows: rows,
         ),
+      ),
+    );
+  }
+
+  // --- MORTALITY DATATABLE ---
+  Widget _buildMortalityTable(List<SaleModel> data) {
+    // Check if there's any mortality data at all
+    bool hasMortality = data.any((s) =>
+        s.broilerDeadQty > 0 ||
+        s.broilerDeadWt > 0 ||
+        s.dpDeadQty > 0 ||
+        s.dpDeadWt > 0 ||
+        s.ogDeadQty > 0 ||
+        s.ogDeadWt > 0);
+
+    if (!hasMortality) return const SizedBox.shrink();
+
+    List<DataRow> rows = data.where((s) =>
+        s.broilerDeadQty > 0 ||
+        s.broilerDeadWt > 0 ||
+        s.dpDeadQty > 0 ||
+        s.dpDeadWt > 0 ||
+        s.ogDeadQty > 0 ||
+        s.ogDeadWt > 0).map((sale) {
+      return DataRow(
+        cells: [
+          DataCell(Text(DateUtil.formatIso(sale.date))),
+          DataCell(Text(sale.broilerDeadQty > 0
+              ? '${sale.broilerDeadQty} / ${sale.broilerDeadWt.toStringAsFixed(2)}'
+              : '-')),
+          DataCell(Text(sale.dpDeadQty > 0
+              ? '${sale.dpDeadQty} / ${sale.dpDeadWt.toStringAsFixed(2)}'
+              : '-')),
+          DataCell(Text(sale.ogDeadQty > 0
+              ? '${sale.ogDeadQty} / ${sale.ogDeadWt.toStringAsFixed(2)}'
+              : '-')),
+        ],
+      );
+    }).toList();
+
+    // Totals row
+    int totBroilerDeadQty = data.fold(0, (sum, s) => sum + s.broilerDeadQty);
+    double totBroilerDeadWt = data.fold(0.0, (sum, s) => sum + s.broilerDeadWt);
+    int totDpDeadQty = data.fold(0, (sum, s) => sum + s.dpDeadQty);
+    double totDpDeadWt = data.fold(0.0, (sum, s) => sum + s.dpDeadWt);
+    int totOgDeadQty = data.fold(0, (sum, s) => sum + s.ogDeadQty);
+    double totOgDeadWt = data.fold(0.0, (sum, s) => sum + s.ogDeadWt);
+
+    rows.add(
+      DataRow(
+        color: WidgetStateProperty.all(Colors.red.shade50),
+        cells: [
+          const DataCell(
+            Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          ),
+          DataCell(Text(
+            '$totBroilerDeadQty / ${totBroilerDeadWt.toStringAsFixed(2)}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          )),
+          DataCell(Text(
+            '$totDpDeadQty / ${totDpDeadWt.toStringAsFixed(2)}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          )),
+          DataCell(Text(
+            '$totOgDeadQty / ${totOgDeadWt.toStringAsFixed(2)}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          )),
+        ],
+      ),
+    );
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            color: Colors.red.shade50,
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Mortality / Dead Stock',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
+              dataRowMinHeight: 40,
+              dataRowMaxHeight: 50,
+              columnSpacing: 24,
+              columns: const [
+                DataColumn(
+                  label: Text('Date', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                DataColumn(
+                  label: Text('Broiler\n(Q / Wt)', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                DataColumn(
+                  label: Text('DP\n(Q / Wt)', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                DataColumn(
+                  label: Text('OG\n(Q / Wt)', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+              rows: rows,
+            ),
+          ),
+        ],
       ),
     );
   }

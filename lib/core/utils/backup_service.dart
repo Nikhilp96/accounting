@@ -3,12 +3,36 @@ import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sqflite/sqflite.dart';
 import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import 'package:media_scanner/media_scanner.dart';
 import '../database/db_helper.dart';
 
 class BackupService {
-  static const String _folderPath = '/storage/emulated/0/Downloads/accounting';
+  static const String _folderName = 'accounting';
   static const String _fileName = 'shop_backup.xlsx';
+
+  /// Resolves the backup folder path using platform-aware storage.
+  /// Falls back to hardcoded path only if platform API fails.
+  static Future<String> _getBackupFolderPath() async {
+    try {
+      // Try app-specific external storage first (no permission needed on Android 10+)
+      final dir = await getExternalStorageDirectory();
+      if (dir != null) {
+        // Use a sibling path in Downloads for user visibility
+        // On Android: /storage/emulated/0/Android/data/... → go up to public Downloads
+        final parts = dir.path.split('/');
+        final androidIndex = parts.indexOf('Android');
+        if (androidIndex > 0) {
+          final publicRoot = parts.sublist(0, androidIndex).join('/');
+          return '$publicRoot/Downloads/$_folderName';
+        }
+        return '${dir.path}/$_folderName';
+      }
+    } catch (_) {
+      // Fall through to hardcoded fallback
+    }
+    return '/storage/emulated/0/Downloads/$_folderName';
+  }
 
   // --- 1. PERMISSIONS ---
   static Future<bool> requestPermissions() async {
@@ -43,19 +67,20 @@ class BackupService {
       excel.delete('Sheet1');
     }
 
-    // Save File
-    final dir = Directory(_folderPath);
+    // Save File using resolved path
+    final folderPath = await _getBackupFolderPath();
+    final dir = Directory(folderPath);
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
 
-    final file = File('$_folderPath/$_fileName');
+    final file = File('$folderPath/$_fileName');
     await file.writeAsBytes(excel.save()!);
-    debugPrint('Backup updated at: $_folderPath/$_fileName');
+    debugPrint('Backup updated at: $folderPath/$_fileName');
 
     MediaScanner.loadMedia(path: file.path);
 
-    return file.path; 
+    return file.path;
   }
 
   static Future<void> _exportTableToSheet(
@@ -95,7 +120,8 @@ class BackupService {
   static Future<bool> restoreFromExcel() async {
     if (!await requestPermissions()) return false;
 
-    final file = File('$_folderPath/$_fileName');
+    final folderPath = await _getBackupFolderPath();
+    final file = File('$folderPath/$_fileName');
     if (!await file.exists()) return false;
 
     var bytes = file.readAsBytesSync();
@@ -109,8 +135,6 @@ class BackupService {
         await _importSheetToTable(txn, excel, DatabaseHelper.tablePurchases);
         await _importSheetToTable(txn, excel, DatabaseHelper.tableSales);
         await _importSheetToTable(txn, excel, DatabaseHelper.tableStock);
-
-        // --- NEW TABLES ADDED HERE ---
         await _importSheetToTable(txn, excel, DatabaseHelper.tableExpenses);
         await _importSheetToTable(
           txn,

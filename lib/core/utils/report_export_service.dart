@@ -115,6 +115,9 @@ class ReportExportService {
       TextCellValue('Eggs (Pcs)'),
       TextCellValue('Pota Qty'),
       TextCellValue('Pota Wt'),
+      TextCellValue('Dead Broiler Wt'),
+      TextCellValue('Dead DP Wt'),
+      TextCellValue('Dead OG Wt'),
       TextCellValue('System Amt (₹)'),
       TextCellValue('Collected Amt (₹)'),
       TextCellValue('Difference (₹)'),
@@ -136,6 +139,9 @@ class ReportExportService {
         IntCellValue(s.eggQty),
         IntCellValue(s.potaKalejiQty),
         DoubleCellValue(s.potaKalejiWt),
+        DoubleCellValue(s.broilerDeadWt),
+        DoubleCellValue(s.dpDeadWt),
+        DoubleCellValue(s.ogDeadWt),
         DoubleCellValue(s.sellingAmount),
         DoubleCellValue(s.totalAmount),
         DoubleCellValue(s.difference),
@@ -148,12 +154,14 @@ class ReportExportService {
       TextCellValue('Date'),
       TextCellValue('Category'),
       TextCellValue('Amount'),
+      TextCellValue('Notes'),
     ]);
     for (var e in expenses) {
       expSheet.appendRow([
         TextCellValue(e.date.split('T')[0]),
         TextCellValue(e.category),
         DoubleCellValue(e.amount),
+        TextCellValue(e.notes),
       ]);
     }
 

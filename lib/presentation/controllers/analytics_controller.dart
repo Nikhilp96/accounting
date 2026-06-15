@@ -43,11 +43,10 @@ class ItemMarginData {
 }
 
 class AnalyticsController extends GetxController {
-  final PurchaseRepository _purchaseRepo = PurchaseRepository();
-  final SalesRepository _salesRepo = SalesRepository();
-  final ExpenseRepository _expenseRepo = ExpenseRepository();
-  final RateRepository _rateRepo =
-      RateRepository(); // <-- Added to fetch Selling Rates
+  final PurchaseRepository _purchaseRepo = Get.find<PurchaseRepository>();
+  final SalesRepository _salesRepo = Get.find<SalesRepository>();
+  final ExpenseRepository _expenseRepo = Get.find<ExpenseRepository>();
+  final RateRepository _rateRepo = Get.find<RateRepository>();
 
   var isLoading = false.obs;
   var selectedDate = DateTime.now().obs;

@@ -1,20 +1,20 @@
-import 'package:accounting/core/utils/backup_service.dart';
+import 'package:accounting/core/utils/backup_manager.dart';
 import 'package:accounting/core/utils/date_util.dart';
+import 'package:accounting/core/cache/app_cache.dart';
 import 'package:accounting/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:accounting/core/utils/report_export_service.dart';
-import 'dart:io';
 import '../../data/models/app_models.dart';
 import '../../data/repositories/repositories.dart';
 
 class ReportsController extends GetxController {
   final String shopCode = Get.arguments ?? 'Unknown';
 
-  final PurchaseRepository _purchaseRepo = PurchaseRepository();
-  final SalesRepository _salesRepo = SalesRepository();
-  final TraderRepository _traderRepo = TraderRepository();
-  final StockRepository _stockRepo = StockRepository(); // Inject Stock Repo
+  final PurchaseRepository _purchaseRepo = Get.find<PurchaseRepository>();
+  final SalesRepository _salesRepo = Get.find<SalesRepository>();
+  final StockRepository _stockRepo = Get.find<StockRepository>();
+  final ExpenseRepository _expenseRepo = Get.find<ExpenseRepository>();
 
   var viewMode = 'Weekly'.obs;
   var activeTab = 'Purchases'.obs;
@@ -28,7 +28,6 @@ class ReportsController extends GetxController {
   // Observable Map to hold all UI text inputs for stock
   var stockMap = <String, dynamic>{}.obs;
 
-  final ExpenseRepository _expenseRepo = ExpenseRepository();
   var expensesList = <ExpenseModel>[].obs;
 
   @override
@@ -82,43 +81,51 @@ class ReportsController extends GetxController {
       String startIso = _startDate.toIso8601String();
       String endIso = _endDate.toIso8601String();
 
-      purchasesList.value = await _purchaseRepo.getPurchasesByDateRange(
-        shopCode,
-        startIso,
-        endIso,
-      );
-      salesList.value = await _salesRepo.getSalesByDateRange(
-        shopCode,
-        startIso,
-        endIso,
-      );
-      expensesList.value = await _expenseRepo.getExpensesByRange(
-        shopCode,
-        startIso,
-        endIso,
-      );
-      await _loadStockData(); // Load balances
+      // Parallelize all independent queries using Future.wait
+      final results = await Future.wait([
+        _purchaseRepo.getPurchasesByDateRange(shopCode, startIso, endIso),
+        _salesRepo.getSalesByDateRange(shopCode, startIso, endIso),
+        _expenseRepo.getExpensesByRange(shopCode, startIso, endIso),
+        _loadStockData(),
+      ]);
+
+      purchasesList.value = results[0] as List<PurchaseModel>;
+      salesList.value = results[1] as List<SaleModel>;
+      expensesList.value = results[2] as List<ExpenseModel>;
+      // Stock data is applied within _loadStockData directly to stockMap
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Fetches historical stock balances for the selected date range
+  // Fetches historical stock balances for the selected date range (parallelized)
   Future<void> _loadStockData() async {
     stockMap.clear();
     String startIso = _startDate.toIso8601String().split('T')[0];
     String endIso = _endDate.toIso8601String().split('T')[0];
 
     List<String> categories = ['Broiler', 'Desi', 'Eggs', 'Pota Kalegi'];
+
+    // Fire all 8 stock queries in parallel (4 categories × 2 dates)
+    final futures = <Future<StockModel?>>[];
     for (var cat in categories) {
-      var openStock = await _stockRepo.getStock(shopCode, startIso, cat);
+      futures.add(_stockRepo.getStock(shopCode, startIso, cat));
+      futures.add(_stockRepo.getStock(shopCode, endIso, cat));
+    }
+
+    final results = await Future.wait(futures);
+
+    // Process results: pairs of [opening, closing] per category
+    for (int i = 0; i < categories.length; i++) {
+      final cat = categories[i];
+      final openStock = results[i * 2];
+      final closeStock = results[i * 2 + 1];
+
       if (openStock != null) {
         stockMap['Opening_${cat}_Qty'] = openStock.qty;
         stockMap['Opening_${cat}_Wt1'] = openStock.weight1;
         stockMap['Opening_${cat}_Wt2'] = openStock.weight2;
       }
-
-      var closeStock = await _stockRepo.getStock(shopCode, endIso, cat);
       if (closeStock != null) {
         stockMap['Closing_${cat}_Qty'] = closeStock.qty;
         stockMap['Closing_${cat}_Wt1'] = closeStock.weight1;
@@ -151,7 +158,7 @@ class ReportsController extends GetxController {
       weight2: stockMap['Closing_${itemType}_Wt2'] ?? 0.0,
     );
     await _stockRepo.saveStock(closeStock);
-    await BackupService.exportToExcel();
+    BackupManager.instance.scheduleBackup();
     Get.snackbar(
       'Saved',
       '$itemType balances updated successfully.',
@@ -162,27 +169,47 @@ class ReportsController extends GetxController {
 
   // --- Deletes & Edits ---
   Future<void> deletePurchaseRecord(int id) async {
-    await _purchaseRepo.deletePurchase(id);
-    await BackupService.exportToExcel();
-    fetchData();
-    Get.snackbar(
-      'Deleted',
-      'Purchase record removed.',
-      backgroundColor: Colors.red.shade700,
-      colorText: Colors.white,
-    );
+    try {
+      await _purchaseRepo.deletePurchase(id);
+      BackupManager.instance.scheduleBackup();
+      fetchData();
+      Get.snackbar(
+        'Deleted',
+        'Purchase record removed.',
+        backgroundColor: Colors.red.shade700,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to delete purchase: $e',
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 
   Future<void> deleteSalesRecord(int id) async {
-    await _salesRepo.deleteSale(id);
-    await BackupService.exportToExcel();
-    fetchData();
-    Get.snackbar(
-      'Deleted',
-      'Sales record removed.',
-      backgroundColor: Colors.red.shade700,
-      colorText: Colors.white,
-    );
+    try {
+      await _salesRepo.deleteSale(id);
+      BackupManager.instance.scheduleBackup();
+      fetchData();
+      Get.snackbar(
+        'Deleted',
+        'Sales record removed.',
+        backgroundColor: Colors.red.shade700,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to delete sales record: $e',
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 
   void editPurchase(PurchaseModel purchase) {
@@ -218,10 +245,8 @@ class ReportsController extends GetxController {
       totalCollectedSales - totalPurchases - totalWeeklyExpenses;
 
   Future<void> _loadTraders() async {
-    final traders = await _traderRepo.getAllTraders();
-    for (var t in traders) {
-      if (t.id != null) traderMap[t.id!] = t.name;
-    }
+    final map = await AppCache.instance.getTraderNameMap();
+    traderMap.value = map;
   }
 
   Map<String, Map<String, double>> get birdsEyeView {
@@ -282,17 +307,17 @@ class ReportsController extends GetxController {
     summary['OG']!['Sales'] = salesList.fold(0.0, (s, i) => s + i.ogWt);
     summary['OG']!['Dead'] = salesList.fold(0.0, (s, i) => s + i.ogDeadWt);
 
-    // 3. Difference Formula: Total Purchase - (Actual Sales + Dead)
-    // Positive difference = Shortage/Leakage. Negative difference = Surplus.
+    // 3. Difference Formula: (Actual Sales + Dead) - Total Purchase
+    // Positive difference = Surplus. Negative difference = Shortage/Leakage.
     summary['Broiler']!['Difference'] =
-        summary['Broiler']!['Purchase']! -
-        (summary['Broiler']!['Sales']! + summary['Broiler']!['Dead']!);
+        (summary['Broiler']!['Sales']! + summary['Broiler']!['Dead']!) -
+        summary['Broiler']!['Purchase']!;
     summary['DP']!['Difference'] =
-        summary['DP']!['Purchase']! -
-        (summary['DP']!['Sales']! + summary['DP']!['Dead']!);
+        (summary['DP']!['Sales']! + summary['DP']!['Dead']!) -
+        summary['DP']!['Purchase']!;
     summary['OG']!['Difference'] =
-        summary['OG']!['Purchase']! -
-        (summary['OG']!['Sales']! + summary['OG']!['Dead']!);
+        (summary['OG']!['Sales']! + summary['OG']!['Dead']!) -
+        summary['OG']!['Purchase']!;
 
     return summary;
   }
@@ -320,15 +345,25 @@ class ReportsController extends GetxController {
   }
 
   Future<void> deleteExpenseRecord(int id) async {
-    await _expenseRepo.deleteExpense(id);
-    await BackupService.exportToExcel();
-    fetchData();
-    Get.snackbar(
-      'Deleted',
-      'Expense record removed.',
-      backgroundColor: Colors.red.shade700,
-      colorText: Colors.white,
-    );
+    try {
+      await _expenseRepo.deleteExpense(id);
+      BackupManager.instance.scheduleBackup();
+      fetchData();
+      Get.snackbar(
+        'Deleted',
+        'Expense record removed.',
+        backgroundColor: Colors.red.shade700,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to delete expense: $e',
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 
   void editExpense(ExpenseModel expense) {

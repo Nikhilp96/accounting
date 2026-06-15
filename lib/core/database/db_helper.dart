@@ -5,7 +5,7 @@ import 'package:path/path.dart';
 
 class DatabaseHelper {
   static const String _databaseName = "shop_accounting.db";
-  static const int _databaseVersion = 5;
+  static const int _databaseVersion = 6;
 
   // Table Names
   static const String tableTraders = 'traders';
@@ -182,6 +182,23 @@ class DatabaseHelper {
     }
 
     await batch.commit();
+
+    // --- COMPOSITE INDEXES FOR QUERY PERFORMANCE ---
+    await db.execute('''
+      CREATE INDEX idx_purchases_shop_date ON $tablePurchases (shop_code, date)
+    ''');
+    await db.execute('''
+      CREATE INDEX idx_sales_shop_date ON $tableSales (shop_code, date)
+    ''');
+    await db.execute('''
+      CREATE INDEX idx_expenses_shop_date ON $tableExpenses (shop_code, date)
+    ''');
+    await db.execute('''
+      CREATE INDEX idx_stock_shop_date_item ON $tableStock (shop_code, date, item_type)
+    ''');
+    await db.execute('''
+      CREATE INDEX idx_trader_payments_date ON $tableTraderPayments (date)
+    ''');
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -299,6 +316,25 @@ class DatabaseHelper {
       await db.execute(
         'ALTER TABLE $tableSales ADD COLUMN og_dead_wt REAL NOT NULL DEFAULT 0.0',
       );
+    }
+
+    if (oldVersion < 6) {
+      // Add composite indexes for query performance
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_purchases_shop_date ON $tablePurchases (shop_code, date)
+      ''');
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_sales_shop_date ON $tableSales (shop_code, date)
+      ''');
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_expenses_shop_date ON $tableExpenses (shop_code, date)
+      ''');
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_stock_shop_date_item ON $tableStock (shop_code, date, item_type)
+      ''');
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_trader_payments_date ON $tableTraderPayments (date)
+      ''');
     }
   }
 }

@@ -1,4 +1,4 @@
-import 'package:accounting/core/utils/backup_service.dart';
+import 'package:accounting/core/utils/backup_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/models/app_models.dart';
@@ -19,8 +19,8 @@ class PurchaseEntryController extends GetxController {
     }
   }
 
-  final PurchaseRepository _purchaseRepo = PurchaseRepository();
-  final TraderRepository _traderRepo = TraderRepository();
+  final PurchaseRepository _purchaseRepo = Get.find<PurchaseRepository>();
+  final TraderRepository _traderRepo = Get.find<TraderRepository>();
 
   // Selected Category
   var selectedItemType = 'Broiler'.obs;
@@ -187,31 +187,35 @@ class PurchaseEntryController extends GetxController {
       traderId: selectedTraderId.value,
     );
 
-    if (editData != null) {
-      await _purchaseRepo.updatePurchase(purchase);
-      await BackupService.exportToExcel();
-      Get.back(); // Return to reports instantly after editing
-    } else {
-      await _purchaseRepo.addPurchase(purchase);
-      await BackupService.exportToExcel();
-      Get.snackbar(
-        'Success',
-        'Purchase saved.',
-        backgroundColor: Colors.green.shade700,
-        colorText: Colors.white,
-      );
-      // Reset logic...
-      quantity.value = 0.0;
-      rate.value = 0.0;
-      weight1.value = 0.0;
-      weight2.value = 0.0;
-      selectedTraderId.value = null;
+    try {
+      if (editData != null) {
+        await _purchaseRepo.updatePurchase(purchase);
+        BackupManager.instance.scheduleBackup();
+        Get.back(); // Return to reports instantly after editing
+      } else {
+        await _purchaseRepo.addPurchase(purchase);
+        BackupManager.instance.scheduleBackup();
+        Get.snackbar(
+          'Success',
+          'Purchase saved.',
+          backgroundColor: Colors.green.shade700,
+          colorText: Colors.white,
+        );
+        // Reset logic...
+        quantity.value = 0.0;
+        rate.value = 0.0;
+        weight1.value = 0.0;
+        weight2.value = 0.0;
+        selectedTraderId.value = null;
 
-      // Clear the text fields visually
-      quantityController.clear();
-      rateController.clear();
-      weight1Controller.clear();
-      weight2Controller.clear();
+        // Clear the text fields visually
+        quantityController.clear();
+        rateController.clear();
+        weight1Controller.clear();
+        weight2Controller.clear();
+      }
+    } catch (e) {
+      _showError('Failed to save purchase: $e');
     }
   }
 }

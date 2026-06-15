@@ -1,5 +1,6 @@
-import 'package:accounting/core/utils/backup_service.dart';
+import 'package:accounting/core/utils/backup_manager.dart';
 import 'package:accounting/core/utils/date_util.dart';
+import 'package:accounting/core/cache/app_cache.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/models/app_models.dart';
@@ -21,9 +22,8 @@ class SalesEntryController extends GetxController {
     }
   }
 
-  // Inject repositories
-  final SalesRepository _salesRepo = SalesRepository();
-  final RateRepository _rateRepo = RateRepository();
+  // Inject repositories via GetX DI
+  final SalesRepository _salesRepo = Get.find<SalesRepository>();
 
   var date = DateTime.now().obs;
 
@@ -116,15 +116,39 @@ class SalesEntryController extends GetxController {
 
   @override
   void onClose() {
+    // Dispose all TextEditingControllers to prevent memory leaks
     wtBroilerCtrl.dispose();
+    qtyBroilerCtrl.dispose();
+    wtMuttonCtrl.dispose();
+    qtyMuttonCtrl.dispose();
+    wtDPCtrl.dispose();
+    qtyDPCtrl.dispose();
+    wtOGCtrl.dispose();
+    qtyOGCtrl.dispose();
+    qtyEggsCtrl.dispose();
+    wtPotaCtrl.dispose();
+    qtyPotaCtrl.dispose();
+    totalAmountCtrl.dispose();
+    qtyBroilerDeadCtrl.dispose();
+    wtBroilerDeadCtrl.dispose();
+    qtyDPDeadCtrl.dispose();
+    wtDPDeadCtrl.dispose();
+    qtyOGDeadCtrl.dispose();
+    wtOGDeadCtrl.dispose();
     rateBroilerCtrl.dispose();
-    // Dispose others as needed...
+    rateMuttonCtrl.dispose();
+    rateDPCtrl.dispose();
+    rateOGCtrl.dispose();
+    rateEggsCtrl.dispose();
+    ratePotaCtrl.dispose();
+    wtMuttonOpeningCtrl.dispose();
+    wtMuttonClosingCtrl.dispose();
     super.onClose();
   }
 
   Future<void> _initializeData() async {
-    // 1. Load Master Rates from Settings DB
-    final rates = await _rateRepo.getAllRates();
+    // 1. Load Master Rates from cache (avoids DB hit on every navigation)
+    final rates = await AppCache.instance.getRates();
     for (var r in rates) {
       if (r.itemName == 'Broiler') {
         rateBroiler.value = r.rate;
@@ -257,8 +281,8 @@ class SalesEntryController extends GetxController {
       date: date.value.toIso8601String(),
       broilerWt: broilerWt.value,
       broilerQty: broilerQty.value,
-      muttonOpeningWt: muttonOpeningWt.value, // <-- Add this
-      muttonClosingWt: muttonClosingWt.value, // <-- Add this
+      muttonOpeningWt: muttonOpeningWt.value,
+      muttonClosingWt: muttonClosingWt.value,
       muttonQty: muttonQty.value,
       muttonWt: muttonWt.value,
       dpQty: dpQty.value,
@@ -268,7 +292,7 @@ class SalesEntryController extends GetxController {
       eggQty: eggQty.value,
       potaKalejiQty: potaKalejiQty.value,
       potaKalejiWt: potaKalejiWt.value,
-      sellingAmount: calculatedSellingAmount, // Safely stores hard math
+      sellingAmount: calculatedSellingAmount,
       totalAmount: userTotalAmount.value,
       difference: differenceAmount,
       broilerDeadQty: broilerDeadQty.value,
@@ -279,22 +303,32 @@ class SalesEntryController extends GetxController {
       ogDeadWt: ogDeadWt.value,
     );
 
-    if (editData != null) {
-      await _salesRepo.updateSale(sale);
-      await BackupService.exportToExcel();
-      Get.back();
-    } else {
-      await _salesRepo.addSale(sale);
-      await BackupService.exportToExcel();
-      _resetFields();
-    }
+    try {
+      if (editData != null) {
+        await _salesRepo.updateSale(sale);
+        BackupManager.instance.scheduleBackup();
+        Get.back();
+      } else {
+        await _salesRepo.addSale(sale);
+        BackupManager.instance.scheduleBackup();
+        _resetFields();
+      }
 
-    Get.snackbar(
-      'Success',
-      'Sales saved for Shop $shopCode on ${DateUtil.format(date.value)}',
-      backgroundColor: Colors.green.shade700,
-      colorText: Colors.white,
-    );
+      Get.snackbar(
+        'Success',
+        'Sales saved for Shop $shopCode on ${DateUtil.format(date.value)}',
+        backgroundColor: Colors.green.shade700,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Save Failed',
+        'Could not save sales record: $e',
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 
   void _resetFields() {

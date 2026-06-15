@@ -277,6 +277,20 @@ class TraderPaymentRepository {
     return maps.map((e) => TraderPaymentModel.fromMap(e)).toList();
   }
 
+  Future<List<TraderPaymentModel>> getPaymentsByDateRange(
+    String startDate,
+    String endDate,
+  ) async {
+    final db = await dbHelper.database;
+    final maps = await db.query(
+      DatabaseHelper.tableTraderPayments,
+      where: 'date >= ? AND date <= ?',
+      whereArgs: [startDate, endDate],
+      orderBy: 'date DESC',
+    );
+    return maps.map((e) => TraderPaymentModel.fromMap(e)).toList();
+  }
+
   Future<int> deletePayment(int id) async {
     final db = await dbHelper.database;
     return await db.delete(

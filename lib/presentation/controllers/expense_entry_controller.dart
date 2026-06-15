@@ -1,4 +1,4 @@
-import 'package:accounting/core/utils/backup_service.dart';
+import 'package:accounting/core/utils/backup_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../data/models/app_models.dart';
@@ -31,8 +31,9 @@ class ExpenseEntryController extends GetxController {
     }
   }
 
-  final ExpenseRepository _expenseRepo = ExpenseRepository();
-  final ExpenseCategoryRepository _catRepo = ExpenseCategoryRepository();
+  final ExpenseRepository _expenseRepo = Get.find<ExpenseRepository>();
+  final ExpenseCategoryRepository _catRepo =
+      Get.find<ExpenseCategoryRepository>();
 
   bool get isEditMode => editData != null;
   var isReady = false.obs; // Tracks if DB categories are loaded
@@ -129,7 +130,7 @@ class ExpenseEntryController extends GetxController {
             date: date.value.toIso8601String(),
             category: row.selectedCategory.value,
             amount: amount,
-            notes: '',
+            notes: isEditMode ? editData?.notes ?? "" : '',
           ),
         );
       }
@@ -145,7 +146,7 @@ class ExpenseEntryController extends GetxController {
           await _expenseRepo.addExpense(exp);
         }
       }
-      await BackupService.exportToExcel();
+      BackupManager.instance.scheduleBackup();
       Get.back();
       Get.snackbar(
         'Success',
@@ -153,6 +154,14 @@ class ExpenseEntryController extends GetxController {
         backgroundColor: Colors.green.shade700,
         colorText: Colors.white,
       );
-    } catch (e) {}
+    } catch (e) {
+      Get.snackbar(
+        'Save Failed',
+        'Could not save expense: $e',
+        backgroundColor: Colors.red.shade800,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 }
