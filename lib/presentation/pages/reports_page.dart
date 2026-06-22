@@ -82,7 +82,7 @@ class ReportsPage extends StatelessWidget {
                       Icons.shopping_cart_outlined,
                     );
                   }
-                  return _buildPurchasesView(controller.purchasesList);
+                  return _buildPurchasesView(controller.purchasesList, context);
                 } else if (controller.activeTab.value == 'Sales') {
                   if (controller.salesList.isEmpty) {
                     return _buildEmptyState(
@@ -648,7 +648,10 @@ class ReportsPage extends StatelessWidget {
   }
 
   // --- MULTI-TABLE PURCHASES VIEW ---
-  Widget _buildPurchasesView(List<PurchaseModel> allPurchases) {
+  Widget _buildPurchasesView(
+    List<PurchaseModel> allPurchases,
+    BuildContext context,
+  ) {
     final broilerList = allPurchases
         .where((p) => p.itemType == 'Broiler')
         .toList();
@@ -663,10 +666,20 @@ class ReportsPage extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.only(bottom: 24, left: 16, right: 16),
       children: [
-        _buildCategoryTable('Broiler', broilerList, Colors.orange.shade800),
-        _buildCategoryTable('Desi', desiList, Colors.brown.shade800),
-        _buildCategoryTable('Eggs', eggsList, Colors.amber.shade900),
-        _buildCategoryTable('Pota Kalegi', potaList, Colors.red.shade800),
+        _buildCategoryTable(
+          'Broiler',
+          broilerList,
+          Colors.orange.shade800,
+          context,
+        ),
+        _buildCategoryTable('Desi', desiList, Colors.brown.shade800, context),
+        _buildCategoryTable('Eggs', eggsList, Colors.amber.shade900, context),
+        _buildCategoryTable(
+          'Pota Kalegi',
+          potaList,
+          Colors.red.shade800,
+          context,
+        ),
       ],
     );
   }
@@ -676,6 +689,7 @@ class ReportsPage extends StatelessWidget {
     String title,
     List<PurchaseModel> data,
     Color themeColor,
+    BuildContext context,
   ) {
     final controller = Get.find<ReportsController>();
     bool isBird = title == 'Broiler' || title == 'Desi';
@@ -747,6 +761,7 @@ class ReportsPage extends StatelessWidget {
         : 0.0;
     double totalAmt = data.fold(0.0, (sum, item) => sum + item.amount);
 
+    // TOTAL ROW
     List<DataCell> totalCells = [
       const DataCell(
         Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -791,11 +806,12 @@ class ReportsPage extends StatelessWidget {
     ]);
     rows.add(
       DataRow(
-        color: MaterialStateProperty.all(themeColor.withOpacity(0.1)),
+        color: WidgetStateProperty.all(themeColor.withOpacity(0.1)),
         cells: totalCells,
       ),
     );
 
+    // OPENING STOCK
     List<DataCell> openCells = [
       DataCell(
         Text(
@@ -823,11 +839,12 @@ class ReportsPage extends StatelessWidget {
     ]);
     rows.add(
       DataRow(
-        color: MaterialStateProperty.all(Colors.blue.withOpacity(0.05)),
+        color: WidgetStateProperty.all(Colors.blue.withOpacity(0.05)),
         cells: openCells,
       ),
     );
 
+    // CLOSING STOCK
     List<DataCell> closeCells = [
       DataCell(
         Text(
@@ -869,11 +886,191 @@ class ReportsPage extends StatelessWidget {
     ]);
     rows.add(
       DataRow(
-        color: MaterialStateProperty.all(Colors.orange.withOpacity(0.05)),
+        color: WidgetStateProperty.all(Colors.orange.withOpacity(0.05)),
         cells: closeCells,
       ),
     );
 
+    // --- NEW: DYNAMIC TRANSFER ROWS BY SHOP ---
+    List<String> otherShops = [
+      'NK',
+      'NP',
+      'PT',
+    ].where((s) => s != controller.shopCode).toList();
+
+    // Generate RECEIVED rows for each other shop
+    for (String otherShop in otherShops) {
+      List<DataCell> rxCells = [
+        DataCell(
+          Text(
+            '[+] RECEIVED FROM $otherShop',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.teal.shade700,
+              fontSize: 13,
+            ),
+          ),
+        ),
+        const DataCell(Text('-')),
+        DataCell(
+          Obx(
+            () => Text(
+              controller
+                  .getTransferTotal(
+                    title,
+                    'Qty',
+                    isReceived: true,
+                    otherShop: otherShop,
+                  )
+                  .toStringAsFixed(2),
+              style: TextStyle(
+                color: Colors.teal.shade800,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ];
+      if (isBird) {
+        rxCells.addAll([
+          DataCell(
+            Obx(
+              () => Text(
+                controller
+                    .getTransferTotal(
+                      title,
+                      'Wt1',
+                      isReceived: true,
+                      otherShop: otherShop,
+                    )
+                    .toStringAsFixed(2),
+                style: TextStyle(
+                  color: Colors.teal.shade800,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          DataCell(
+            Obx(
+              () => Text(
+                controller
+                    .getTransferTotal(
+                      title,
+                      'Wt2',
+                      isReceived: true,
+                      otherShop: otherShop,
+                    )
+                    .toStringAsFixed(2),
+                style: TextStyle(
+                  color: Colors.teal.shade800,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ]);
+      }
+      rxCells.addAll([
+        const DataCell(Text('-')),
+        const DataCell(Text('-')),
+        const DataCell(Text('-')),
+      ]);
+      rows.add(
+        DataRow(
+          color: WidgetStateProperty.all(Colors.teal.withOpacity(0.05)),
+          cells: rxCells,
+        ),
+      );
+    }
+
+    // Generate SENT rows for each other shop
+    for (String otherShop in otherShops) {
+      List<DataCell> txCells = [
+        DataCell(
+          Text(
+            '[-] SENT TO $otherShop',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.purple.shade700,
+              fontSize: 13,
+            ),
+          ),
+        ),
+        const DataCell(Text('-')),
+        DataCell(
+          Obx(
+            () => Text(
+              controller
+                  .getTransferTotal(
+                    title,
+                    'Qty',
+                    isReceived: false,
+                    otherShop: otherShop,
+                  )
+                  .toStringAsFixed(2),
+              style: TextStyle(
+                color: Colors.purple.shade800,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ];
+      if (isBird) {
+        txCells.addAll([
+          DataCell(
+            Obx(
+              () => Text(
+                controller
+                    .getTransferTotal(
+                      title,
+                      'Wt1',
+                      isReceived: false,
+                      otherShop: otherShop,
+                    )
+                    .toStringAsFixed(2),
+                style: TextStyle(
+                  color: Colors.purple.shade800,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          DataCell(
+            Obx(
+              () => Text(
+                controller
+                    .getTransferTotal(
+                      title,
+                      'Wt2',
+                      isReceived: false,
+                      otherShop: otherShop,
+                    )
+                    .toStringAsFixed(2),
+                style: TextStyle(
+                  color: Colors.purple.shade800,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ]);
+      }
+      txCells.addAll([
+        const DataCell(Text('-')),
+        const DataCell(Text('-')),
+        const DataCell(Text('-')),
+      ]);
+      rows.add(
+        DataRow(
+          color: WidgetStateProperty.all(Colors.purple.withOpacity(0.05)),
+          cells: txCells,
+        ),
+      );
+    }
+
+    // ACTUAL ROW (Uses overall Transfer Totals)
     List<DataCell> actualCells = [
       const DataCell(
         Text(
@@ -887,7 +1084,17 @@ class ReportsPage extends StatelessWidget {
           () => Text(
             (totalQty +
                     (controller.stockMap['Opening_${title}_Qty'] ?? 0.0) -
-                    (controller.stockMap['Closing_${title}_Qty'] ?? 0.0))
+                    (controller.stockMap['Closing_${title}_Qty'] ?? 0.0) +
+                    controller.getTransferTotal(
+                      title,
+                      'Qty',
+                      isReceived: true,
+                    ) - // Total across all shops
+                    controller.getTransferTotal(
+                      title,
+                      'Qty',
+                      isReceived: false,
+                    )) // Total across all shops
                 .toStringAsFixed(2),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
           ),
@@ -899,7 +1106,20 @@ class ReportsPage extends StatelessWidget {
         DataCell(
           Obx(
             () => Text(
-              (totalWt1 + (controller.stockMap['Opening_${title}_Wt1'] ?? 0.0) - (controller.stockMap['Closing_${title}_Wt1'] ?? 0.0)).toStringAsFixed(2),
+              (totalWt1 +
+                      (controller.stockMap['Opening_${title}_Wt1'] ?? 0.0) -
+                      (controller.stockMap['Closing_${title}_Wt1'] ?? 0.0) +
+                      controller.getTransferTotal(
+                        title,
+                        'Wt1',
+                        isReceived: true,
+                      ) -
+                      controller.getTransferTotal(
+                        title,
+                        'Wt1',
+                        isReceived: false,
+                      ))
+                  .toStringAsFixed(2),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
           ),
@@ -907,7 +1127,20 @@ class ReportsPage extends StatelessWidget {
         DataCell(
           Obx(
             () => Text(
-              (totalWt2 + (controller.stockMap['Opening_${title}_Wt2'] ?? 0.0) - (controller.stockMap['Closing_${title}_Wt2'] ?? 0.0)).toStringAsFixed(2),
+              (totalWt2 +
+                      (controller.stockMap['Opening_${title}_Wt2'] ?? 0.0) -
+                      (controller.stockMap['Closing_${title}_Wt2'] ?? 0.0) +
+                      controller.getTransferTotal(
+                        title,
+                        'Wt2',
+                        isReceived: true,
+                      ) -
+                      controller.getTransferTotal(
+                        title,
+                        'Wt2',
+                        isReceived: false,
+                      ))
+                  .toStringAsFixed(2),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
             ),
           ),
@@ -921,11 +1154,12 @@ class ReportsPage extends StatelessWidget {
     ]);
     rows.add(
       DataRow(
-        color: MaterialStateProperty.all(themeColor.withOpacity(0.2)),
+        color: WidgetStateProperty.all(themeColor.withOpacity(0.2)),
         cells: actualCells,
       ),
     );
 
+    // Columns
     List<DataColumn> columns = [
       const DataColumn(
         label: Text('Date', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -982,19 +1216,43 @@ class ReportsPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // HEADER WITH TRANSFER BUTTON
           Container(
             color: themeColor.withOpacity(0.15),
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(Icons.inventory_2_outlined, color: themeColor, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  '$title Ledger',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: themeColor,
+                Row(
+                  children: [
+                    Icon(
+                      Icons.inventory_2_outlined,
+                      color: themeColor,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$title Ledger',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: themeColor,
+                      ),
+                    ),
+                  ],
+                ),
+                ElevatedButton.icon(
+                  onPressed: () =>
+                      _showTransferDialog(context, controller, title),
+                  icon: const Icon(Icons.swap_horiz, size: 18),
+                  label: const Text('Transfer'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: themeColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                   ),
                 ),
               ],
@@ -1003,7 +1261,7 @@ class ReportsPage extends StatelessWidget {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: DataTable(
-              headingRowColor: MaterialStateProperty.all(Colors.grey.shade50),
+              headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
               dataRowMinHeight: 40,
               dataRowMaxHeight: 50,
               columnSpacing: 24,
@@ -1012,6 +1270,374 @@ class ReportsPage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showTransferDialog(
+    BuildContext context,
+    ReportsController controller,
+    String itemType,
+  ) {
+    bool isSending = true;
+    String selectedShop = controller.shopCode == 'NK' ? 'NP' : 'NK';
+    List<String> availableShops = [
+      'NK',
+      'NP',
+      'PT',
+    ].where((s) => s != controller.shopCode).toList();
+
+    final qtyCtrl = TextEditingController();
+    final wt1Ctrl = TextEditingController();
+    final wt2Ctrl = TextEditingController();
+
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            // Dynamic theme colors based on the selected action
+            Color actionColor = isSending
+                ? Colors.purple.shade600
+                : Colors.teal.shade600;
+            Color bgColor = isSending
+                ? Colors.purple.shade50
+                : Colors.teal.shade50;
+
+            return Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // --- HEADER ---
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: bgColor,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            isSending ? Icons.call_made : Icons.call_received,
+                            color: actionColor,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Transfer $itemType',
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                isSending
+                                    ? 'Move stock out'
+                                    : 'Receive stock in',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // --- MODERN SEGMENTED TOGGLE ---
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.all(4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => isSending = true),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isSending
+                                      ? Colors.white
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: isSending
+                                      ? [
+                                          const BoxShadow(
+                                            color: Colors.black12,
+                                            blurRadius: 4,
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  'Send Items',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: isSending
+                                        ? Colors.purple.shade700
+                                        : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => isSending = false),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: !isSending
+                                      ? Colors.white
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: !isSending
+                                      ? [
+                                          const BoxShadow(
+                                            color: Colors.black12,
+                                            blurRadius: 4,
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  'Receive Items',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: !isSending
+                                        ? Colors.teal.shade700
+                                        : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // --- SHOP SELECTION ---
+                    DropdownButtonFormField<String>(
+                      value: selectedShop,
+                      decoration: InputDecoration(
+                        labelText: isSending
+                            ? 'Destination Shop'
+                            : 'Source Shop',
+                        prefixIcon: const Icon(Icons.storefront_outlined),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                      ),
+                      items: availableShops
+                          .map(
+                            (s) => DropdownMenuItem(
+                              value: s,
+                              child: Text('Shop $s'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setState(() => selectedShop = v!),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // --- QUANTITY FIELD ---
+                    TextField(
+                      controller: qtyCtrl,
+                      decoration: InputDecoration(
+                        labelText: 'Quantity (Pcs)',
+                        prefixIcon: const Icon(Icons.numbers),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+
+                    // --- WEIGHT FIELDS (IF BIRD) ---
+                    if (itemType == 'Broiler' || itemType == 'Desi') ...[
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: wt1Ctrl,
+                              decoration: InputDecoration(
+                                labelText: itemType == 'Broiler'
+                                    ? 'Small Wt'
+                                    : 'DP Wt',
+                                prefixIcon: const Icon(
+                                  Icons.scale_outlined,
+                                  size: 20,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
+                              ),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              onChanged: (val) {
+                                if ((double.tryParse(val) ?? 0) > 0) {
+                                  wt2Ctrl.clear();
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: wt2Ctrl,
+                              decoration: InputDecoration(
+                                labelText: itemType == 'Broiler'
+                                    ? 'Big Wt'
+                                    : 'OG Wt',
+                                prefixIcon: const Icon(
+                                  Icons.scale_outlined,
+                                  size: 20,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
+                              ),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              onChanged: (val) {
+                                if ((double.tryParse(val) ?? 0) > 0) {
+                                  wt1Ctrl.clear();
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 32),
+
+                    // --- ACTION BUTTONS ---
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Get.back(),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(color: Colors.grey.shade700),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              double qty = double.tryParse(qtyCtrl.text) ?? 0;
+                              double wt1 = double.tryParse(wt1Ctrl.text) ?? 0;
+                              double wt2 = double.tryParse(wt2Ctrl.text) ?? 0;
+
+                              // --- VALIDATION RULES ---
+                              if (qty <= 0 && wt1 <= 0 && wt2 <= 0) {
+                                Get.snackbar(
+                                  'Validation Error',
+                                  'Please enter a valid quantity or weight to proceed.',
+                                  backgroundColor: Colors.red.shade800,
+                                  colorText: Colors.white,
+                                  snackPosition: SnackPosition.BOTTOM,
+                                  margin: const EdgeInsets.all(16),
+                                  icon: const Icon(
+                                    Icons.error_outline,
+                                    color: Colors.white,
+                                  ),
+                                );
+                                return; // Stop execution
+                              }
+
+                              // If valid, execute save and dismiss
+                              controller.saveTransfer(
+                                itemType,
+                                isSending,
+                                selectedShop,
+                                qty,
+                                wt1,
+                                wt2,
+                              );
+                              Get.back();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: actionColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 2,
+                            ),
+                            icon: Icon(isSending ? Icons.send : Icons.download),
+                            label: const Text(
+                              'Confirm',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -1355,38 +1981,57 @@ class ReportsPage extends StatelessWidget {
   // --- MORTALITY DATATABLE ---
   Widget _buildMortalityTable(List<SaleModel> data) {
     // Check if there's any mortality data at all
-    bool hasMortality = data.any((s) =>
-        s.broilerDeadQty > 0 ||
-        s.broilerDeadWt > 0 ||
-        s.dpDeadQty > 0 ||
-        s.dpDeadWt > 0 ||
-        s.ogDeadQty > 0 ||
-        s.ogDeadWt > 0);
+    bool hasMortality = data.any(
+      (s) =>
+          s.broilerDeadQty > 0 ||
+          s.broilerDeadWt > 0 ||
+          s.dpDeadQty > 0 ||
+          s.dpDeadWt > 0 ||
+          s.ogDeadQty > 0 ||
+          s.ogDeadWt > 0,
+    );
 
     if (!hasMortality) return const SizedBox.shrink();
 
-    List<DataRow> rows = data.where((s) =>
-        s.broilerDeadQty > 0 ||
-        s.broilerDeadWt > 0 ||
-        s.dpDeadQty > 0 ||
-        s.dpDeadWt > 0 ||
-        s.ogDeadQty > 0 ||
-        s.ogDeadWt > 0).map((sale) {
-      return DataRow(
-        cells: [
-          DataCell(Text(DateUtil.formatIso(sale.date))),
-          DataCell(Text(sale.broilerDeadQty > 0
-              ? '${sale.broilerDeadQty} / ${sale.broilerDeadWt.toStringAsFixed(2)}'
-              : '-')),
-          DataCell(Text(sale.dpDeadQty > 0
-              ? '${sale.dpDeadQty} / ${sale.dpDeadWt.toStringAsFixed(2)}'
-              : '-')),
-          DataCell(Text(sale.ogDeadQty > 0
-              ? '${sale.ogDeadQty} / ${sale.ogDeadWt.toStringAsFixed(2)}'
-              : '-')),
-        ],
-      );
-    }).toList();
+    List<DataRow> rows = data
+        .where(
+          (s) =>
+              s.broilerDeadQty > 0 ||
+              s.broilerDeadWt > 0 ||
+              s.dpDeadQty > 0 ||
+              s.dpDeadWt > 0 ||
+              s.ogDeadQty > 0 ||
+              s.ogDeadWt > 0,
+        )
+        .map((sale) {
+          return DataRow(
+            cells: [
+              DataCell(Text(DateUtil.formatIso(sale.date))),
+              DataCell(
+                Text(
+                  sale.broilerDeadQty > 0
+                      ? '${sale.broilerDeadQty} / ${sale.broilerDeadWt.toStringAsFixed(2)}'
+                      : '-',
+                ),
+              ),
+              DataCell(
+                Text(
+                  sale.dpDeadQty > 0
+                      ? '${sale.dpDeadQty} / ${sale.dpDeadWt.toStringAsFixed(2)}'
+                      : '-',
+                ),
+              ),
+              DataCell(
+                Text(
+                  sale.ogDeadQty > 0
+                      ? '${sale.ogDeadQty} / ${sale.ogDeadWt.toStringAsFixed(2)}'
+                      : '-',
+                ),
+              ),
+            ],
+          );
+        })
+        .toList();
 
     // Totals row
     int totBroilerDeadQty = data.fold(0, (sum, s) => sum + s.broilerDeadQty);
@@ -1401,20 +2046,29 @@ class ReportsPage extends StatelessWidget {
         color: WidgetStateProperty.all(Colors.red.shade50),
         cells: [
           const DataCell(
-            Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            Text(
+              'TOTAL',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
           ),
-          DataCell(Text(
-            '$totBroilerDeadQty / ${totBroilerDeadWt.toStringAsFixed(2)}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          )),
-          DataCell(Text(
-            '$totDpDeadQty / ${totDpDeadWt.toStringAsFixed(2)}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          )),
-          DataCell(Text(
-            '$totOgDeadQty / ${totOgDeadWt.toStringAsFixed(2)}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          )),
+          DataCell(
+            Text(
+              '$totBroilerDeadQty / ${totBroilerDeadWt.toStringAsFixed(2)}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          DataCell(
+            Text(
+              '$totDpDeadQty / ${totDpDeadWt.toStringAsFixed(2)}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          DataCell(
+            Text(
+              '$totOgDeadQty / ${totOgDeadWt.toStringAsFixed(2)}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
         ],
       ),
     );
@@ -1441,7 +2095,11 @@ class ReportsPage extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             child: Row(
               children: [
-                Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 20),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.red.shade700,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Mortality / Dead Stock',
@@ -1463,16 +2121,28 @@ class ReportsPage extends StatelessWidget {
               columnSpacing: 24,
               columns: const [
                 DataColumn(
-                  label: Text('Date', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: Text(
+                    'Date',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 DataColumn(
-                  label: Text('Broiler\n(Q / Wt)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: Text(
+                    'Broiler\n(Q / Wt)',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 DataColumn(
-                  label: Text('DP\n(Q / Wt)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: Text(
+                    'DP\n(Q / Wt)',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 DataColumn(
-                  label: Text('OG\n(Q / Wt)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: Text(
+                    'OG\n(Q / Wt)',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
               rows: rows,

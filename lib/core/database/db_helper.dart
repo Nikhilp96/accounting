@@ -5,7 +5,7 @@ import 'package:path/path.dart';
 
 class DatabaseHelper {
   static const String _databaseName = "shop_accounting.db";
-  static const int _databaseVersion = 6;
+  static const int _databaseVersion = 7;
 
   // Table Names
   static const String tableTraders = 'traders';
@@ -16,6 +16,7 @@ class DatabaseHelper {
   static const String tableExpenses = 'expenses';
   static const String tableTraderPayments = 'trader_payments';
   static const String tableExpenseCategories = 'expense_categories';
+  static const String tableTransfers = 'transfers';
 
   DatabaseHelper._privateConstructor();
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
@@ -147,6 +148,19 @@ class DatabaseHelper {
       is_salary INTEGER NOT NULL DEFAULT 0
     )
   ''');
+
+    await db.execute('''
+      CREATE TABLE $tableTransfers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        from_shop TEXT NOT NULL,
+        to_shop TEXT NOT NULL,
+        item_type TEXT NOT NULL,
+        qty REAL NOT NULL,
+        weight_1 REAL NOT NULL,
+        weight_2 REAL NOT NULL
+      )
+    ''');
 
     // --- SEED INITIAL DATA ---
     final batch = db.batch();
@@ -334,6 +348,24 @@ class DatabaseHelper {
       ''');
       await db.execute('''
         CREATE INDEX IF NOT EXISTS idx_trader_payments_date ON $tableTraderPayments (date)
+      ''');
+    }
+
+    if (oldVersion < 7) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $tableTransfers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          date TEXT NOT NULL,
+          from_shop TEXT NOT NULL,
+          to_shop TEXT NOT NULL,
+          item_type TEXT NOT NULL,
+          qty REAL NOT NULL,
+          weight_1 REAL NOT NULL,
+          weight_2 REAL NOT NULL
+        )
+      ''');
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_transfers_shops_date ON $tableTransfers (from_shop, to_shop, date)
       ''');
     }
   }

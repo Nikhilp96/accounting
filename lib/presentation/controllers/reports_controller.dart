@@ -28,6 +28,9 @@ class ReportsController extends GetxController {
   // Observable Map to hold all UI text inputs for stock
   var stockMap = <String, dynamic>{}.obs;
 
+  final TransferRepository _transferRepo = Get.find<TransferRepository>();
+  var transfersList = <TransferModel>[].obs;
+
   var expensesList = <ExpenseModel>[].obs;
 
   @override
@@ -86,13 +89,14 @@ class ReportsController extends GetxController {
         _purchaseRepo.getPurchasesByDateRange(shopCode, startIso, endIso),
         _salesRepo.getSalesByDateRange(shopCode, startIso, endIso),
         _expenseRepo.getExpensesByRange(shopCode, startIso, endIso),
+        _transferRepo.getTransfersForShop(shopCode, startIso, endIso),
         _loadStockData(),
       ]);
 
       purchasesList.value = results[0] as List<PurchaseModel>;
       salesList.value = results[1] as List<SaleModel>;
       expensesList.value = results[2] as List<ExpenseModel>;
-      // Stock data is applied within _loadStockData directly to stockMap
+      transfersList.value = results[3] as List<TransferModel>;
     } finally {
       isLoading.value = false;
     }
@@ -268,29 +272,43 @@ class ReportsController extends GetxController {
     double bPur2 = purchasesList
         .where((p) => p.itemType == 'Broiler')
         .fold(0.0, (s, p) => s + (p.weight2 ?? 0.0));
+    double bNetTransfer =
+        getTransferTotal('Broiler', 'Wt1', isReceived: true) +
+        getTransferTotal('Broiler', 'Wt2', isReceived: true) -
+        getTransferTotal('Broiler', 'Wt1', isReceived: false) -
+        getTransferTotal('Broiler', 'Wt2', isReceived: false);
     summary['Broiler']!['Purchase'] =
         (bPur1 +
             (stockMap['Opening_Broiler_Wt1'] ?? 0.0) -
             (stockMap['Closing_Broiler_Wt1'] ?? 0.0)) +
         (bPur2 +
             (stockMap['Opening_Broiler_Wt2'] ?? 0.0) -
-            (stockMap['Closing_Broiler_Wt2'] ?? 0.0));
+            (stockMap['Closing_Broiler_Wt2'] ?? 0.0)) +
+        bNetTransfer;
 
     double dPur = purchasesList
         .where((p) => p.itemType == 'Desi')
         .fold(0.0, (s, p) => s + (p.weight1 ?? 0.0));
+    double dNetTransfer =
+        getTransferTotal('Desi', 'Wt1', isReceived: true) -
+        getTransferTotal('Desi', 'Wt1', isReceived: false);
     summary['DP']!['Purchase'] =
         (dPur +
-        (stockMap['Opening_Desi_Wt1'] ?? 0.0) -
-        (stockMap['Closing_Desi_Wt1'] ?? 0.0));
+            (stockMap['Opening_Desi_Wt1'] ?? 0.0) -
+            (stockMap['Closing_Desi_Wt1'] ?? 0.0)) +
+        dNetTransfer;
 
     double oPur = purchasesList
         .where((p) => p.itemType == 'Desi')
         .fold(0.0, (s, p) => s + (p.weight2 ?? 0.0));
+    double oNetTransfer =
+        getTransferTotal('Desi', 'Wt2', isReceived: true) -
+        getTransferTotal('Desi', 'Wt2', isReceived: false);
     summary['OG']!['Purchase'] =
         (oPur +
-        (stockMap['Opening_Desi_Wt2'] ?? 0.0) -
-        (stockMap['Closing_Desi_Wt2'] ?? 0.0));
+            (stockMap['Opening_Desi_Wt2'] ?? 0.0) -
+            (stockMap['Closing_Desi_Wt2'] ?? 0.0)) +
+        oNetTransfer;
 
     // 2. Calculate Actual Sales & Mortality
     double totalBroilerSales = salesList.fold(0.0, (s, i) => s + i.broilerWt);
@@ -413,5 +431,63 @@ class ReportsController extends GetxController {
         snackPosition: SnackPosition.BOTTOM,
       );
     }
+  }
+
+  // Add these helper methods to calculate received/sent totals:
+  double getTransferTotal(
+    String itemType,
+    String field, {
+    required bool isReceived,
+    String? otherShop, // <-- Added optional parameter
+  }) {
+    return transfersList
+        .where((t) {
+          bool matchesShop = isReceived
+              ? t.toShop == shopCode
+              : t.fromShop == shopCode;
+
+          // Filter by the specific other shop if provided
+          bool matchesOther =
+              otherShop == null ||
+              (isReceived ? t.fromShop == otherShop : t.toShop == otherShop);
+
+          return matchesShop && matchesOther && t.itemType == itemType;
+        })
+        .fold(0.0, (sum, t) {
+          if (field == 'Qty') return sum + t.qty;
+          if (field == 'Wt1') return sum + t.weight1;
+          if (field == 'Wt2') return sum + t.weight2;
+          return sum;
+        });
+  }
+
+  Future<void> saveTransfer(
+    String itemType,
+    bool isSending,
+    String otherShop,
+    double qty,
+    double wt1,
+    double wt2,
+  ) async {
+    final transfer = TransferModel(
+      date: selectedDate.value.toIso8601String(),
+      fromShop: isSending ? shopCode : otherShop,
+      toShop: isSending ? otherShop : shopCode,
+      itemType: itemType,
+      qty: qty,
+      weight1: wt1,
+      weight2: wt2,
+    );
+
+    await _transferRepo.addTransfer(transfer);
+    BackupManager.instance.scheduleBackup();
+    fetchData();
+
+    Get.snackbar(
+      'Transfer Saved',
+      'Successfully logged transfer between $shopCode and $otherShop.',
+      backgroundColor: Colors.green.shade700,
+      colorText: Colors.white,
+    );
   }
 }

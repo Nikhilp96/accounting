@@ -62,6 +62,7 @@ class BackupService {
     await _exportTableToSheet(db, excel, DatabaseHelper.tableExpenses);
     await _exportTableToSheet(db, excel, DatabaseHelper.tableTraderPayments);
     await _exportTableToSheet(db, excel, DatabaseHelper.tableExpenseCategories);
+    await _exportTableToSheet(db, excel, DatabaseHelper.tableTransfers);
 
     // Remove the default 'Sheet1'
     if (excel.tables.keys.contains('Sheet1') && excel.tables.keys.length > 1) {
@@ -147,6 +148,7 @@ class BackupService {
           excel,
           DatabaseHelper.tableExpenseCategories,
         );
+        await _importSheetToTable(txn, excel, DatabaseHelper.tableTransfers);
       });
       return true;
     } catch (e) {
