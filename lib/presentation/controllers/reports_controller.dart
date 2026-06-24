@@ -490,4 +490,37 @@ class ReportsController extends GetxController {
       colorText: Colors.white,
     );
   }
+
+  // --- NEW: Edit and Delete Transfer Logic ---
+  Future<void> updateTransferRecord(TransferModel updatedTransfer) async {
+    try {
+      await _transferRepo.updateTransfer(updatedTransfer);
+      BackupManager.instance.scheduleBackup();
+      fetchData();
+      Get.snackbar(
+        'Updated', 
+        'Transfer record updated successfully.',
+        backgroundColor: Colors.blue.shade700,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to update transfer: $e', backgroundColor: Colors.red);
+    }
+  }
+
+  Future<void> deleteTransferRecord(int id) async {
+    try {
+      await _transferRepo.deleteTransfer(id);
+      BackupManager.instance.scheduleBackup();
+      fetchData();
+      Get.snackbar(
+        'Deleted', 
+        'Transfer record removed.',
+        backgroundColor: Colors.red.shade700,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to delete transfer: $e', backgroundColor: Colors.red);
+    }
+  }
 }

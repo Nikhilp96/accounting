@@ -365,6 +365,16 @@ class TransferRepository {
     return maps.map((e) => TransferModel.fromMap(e)).toList();
   }
 
+  Future<int> updateTransfer(TransferModel transfer) async {
+    final db = await dbHelper.database;
+    return await db.update(
+      DatabaseHelper.tableTransfers,
+      transfer.toMap(),
+      where: 'id = ?',
+      whereArgs: [transfer.id],
+    );
+  }
+
   Future<int> deleteTransfer(int id) async {
     final db = await dbHelper.database;
     return await db.delete(

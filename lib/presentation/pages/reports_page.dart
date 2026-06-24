@@ -972,9 +972,21 @@ class ReportsPage extends StatelessWidget {
         ]);
       }
       rxCells.addAll([
-        const DataCell(Text('-')),
-        const DataCell(Text('-')),
-        const DataCell(Text('-')),
+        const DataCell(Text('-')), // Rate
+        const DataCell(Text('-')), // Amount
+        DataCell(
+          IconButton(
+            icon: Icon(Icons.list_alt, color: Colors.teal.shade700, size: 20),
+            onPressed: () => _showTransferHistoryDialog(
+              context,
+              controller,
+              title,
+              isReceived: true,
+              otherShop: otherShop,
+            ),
+            tooltip: 'View Transfer History',
+          ),
+        ),
       ]);
       rows.add(
         DataRow(
@@ -1058,9 +1070,21 @@ class ReportsPage extends StatelessWidget {
         ]);
       }
       txCells.addAll([
-        const DataCell(Text('-')),
-        const DataCell(Text('-')),
-        const DataCell(Text('-')),
+        const DataCell(Text('-')), // Rate
+        const DataCell(Text('-')), // Amount
+        DataCell(
+          IconButton(
+            icon: Icon(Icons.list_alt, color: Colors.purple.shade700, size: 20),
+            onPressed: () => _showTransferHistoryDialog(
+              context,
+              controller,
+              title,
+              isReceived: false,
+              otherShop: otherShop,
+            ),
+            tooltip: 'View Transfer History',
+          ),
+        ),
       ]);
       rows.add(
         DataRow(
@@ -1277,19 +1301,35 @@ class ReportsPage extends StatelessWidget {
   void _showTransferDialog(
     BuildContext context,
     ReportsController controller,
-    String itemType,
-  ) {
-    bool isSending = true;
-    String selectedShop = controller.shopCode == 'NK' ? 'NP' : 'NK';
+    String itemType, {
+    TransferModel? editData,
+  }) {
+    bool isEdit = editData != null;
+
+    // Pre-fill states based on whether we are editing or creating
+    bool isSending = isEdit
+        ? (editData.fromShop == controller.shopCode)
+        : true;
+    String selectedShop = isEdit
+        ? (isSending ? editData.toShop : editData.fromShop)
+        : (controller.shopCode == 'NK' ? 'NP' : 'NK');
+
     List<String> availableShops = [
       'NK',
       'NP',
       'PT',
     ].where((s) => s != controller.shopCode).toList();
 
-    final qtyCtrl = TextEditingController();
-    final wt1Ctrl = TextEditingController();
-    final wt2Ctrl = TextEditingController();
+    // Pre-fill controllers if editing
+    final qtyCtrl = TextEditingController(
+      text: isEdit && editData.qty > 0 ? editData.qty.toString() : '',
+    );
+    final wt1Ctrl = TextEditingController(
+      text: isEdit && editData.weight1 > 0 ? editData.weight1.toString() : '',
+    );
+    final wt2Ctrl = TextEditingController(
+      text: isEdit && editData.weight2 > 0 ? editData.weight2.toString() : '',
+    );
 
     Get.dialog(
       Dialog(
@@ -1601,14 +1641,35 @@ class ReportsPage extends StatelessWidget {
                               }
 
                               // If valid, execute save and dismiss
-                              controller.saveTransfer(
-                                itemType,
-                                isSending,
-                                selectedShop,
-                                qty,
-                                wt1,
-                                wt2,
-                              );
+                              if (isEdit) {
+                                final updatedTransfer = TransferModel(
+                                  id: editData.id,
+                                  date: editData
+                                      .date, // Retain original timestamp
+                                  fromShop: isSending
+                                      ? controller.shopCode
+                                      : selectedShop,
+                                  toShop: isSending
+                                      ? selectedShop
+                                      : controller.shopCode,
+                                  itemType: itemType,
+                                  qty: qty,
+                                  weight1: wt1,
+                                  weight2: wt2,
+                                );
+                                controller.updateTransferRecord(
+                                  updatedTransfer,
+                                );
+                              } else {
+                                controller.saveTransfer(
+                                  itemType,
+                                  isSending,
+                                  selectedShop,
+                                  qty,
+                                  wt1,
+                                  wt2,
+                                );
+                              }
                               Get.back();
                             },
                             style: ElevatedButton.styleFrom(
@@ -2317,6 +2378,147 @@ class ReportsPage extends StatelessWidget {
         Get.back();
         onConfirm();
       },
+    );
+  }
+
+  void _showTransferHistoryDialog(
+    BuildContext context,
+    ReportsController controller,
+    String itemType, {
+    required bool isReceived,
+    required String otherShop,
+  }) {
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    isReceived ? Icons.call_received : Icons.call_made,
+                    color: isReceived ? Colors.teal : Colors.purple,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      isReceived
+                          ? 'Received from $otherShop'
+                          : 'Sent to $otherShop',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 32),
+              Flexible(
+                child: Obx(() {
+                  // Filter individual transfers
+                  var filtered = controller.transfersList.where((t) {
+                    bool matchesShop = isReceived
+                        ? t.toShop == controller.shopCode
+                        : t.fromShop == controller.shopCode;
+                    bool matchesOther = isReceived
+                        ? t.fromShop == otherShop
+                        : t.toShop == otherShop;
+                    return matchesShop &&
+                        matchesOther &&
+                        t.itemType == itemType;
+                  }).toList();
+
+                  if (filtered.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text('No transfers found.'),
+                    );
+                  }
+
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      var t = filtered[index];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          'Qty: ${t.qty}  |  Wt 1: ${t.weight1}  |  Wt 2: ${t.weight2}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        subtitle: Text(
+                          DateUtil.formatIso(t.date),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                Icons.edit_outlined,
+                                color: Colors.blue.shade700,
+                                size: 20,
+                              ),
+                              onPressed: () {
+                                Get.back(); // Close history dialog
+                                _showTransferDialog(
+                                  context,
+                                  controller,
+                                  itemType,
+                                  editData: t,
+                                ); // Open edit dialog
+                              },
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                Icons.delete_outline,
+                                color: Colors.red.shade700,
+                                size: 20,
+                              ),
+                              onPressed: () {
+                                _confirmDelete(context, () {
+                                  controller.deleteTransferRecord(t.id!);
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                }),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Get.back(),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.grey.shade100,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text('Close'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
