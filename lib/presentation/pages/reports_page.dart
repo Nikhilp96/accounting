@@ -15,7 +15,31 @@ class ReportsPage extends StatelessWidget {
       backgroundColor: Colors.grey.shade100, // Softer background
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: Text('Reports - Shop ${controller.shopCode}'),
+        title: Obx(
+          () => DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: controller.shopCode.value,
+              dropdownColor: Colors.brown.shade800,
+              icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+              items: controller.availableShops.map((String shop) {
+                return DropdownMenuItem<String>(
+                  value: shop,
+                  child: Text('Reports - Shop $shop'),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                if (newValue != null) {
+                  controller.shopCode.value = newValue;
+                }
+              },
+            ),
+          ),
+        ),
         backgroundColor: Colors.brown.shade700,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -896,7 +920,7 @@ class ReportsPage extends StatelessWidget {
       'NK',
       'NP',
       'PT',
-    ].where((s) => s != controller.shopCode).toList();
+    ].where((s) => s != controller.shopCode.value).toList();
 
     // Generate RECEIVED rows for each other shop
     for (String otherShop in otherShops) {
@@ -1308,17 +1332,17 @@ class ReportsPage extends StatelessWidget {
 
     // Pre-fill states based on whether we are editing or creating
     bool isSending = isEdit
-        ? (editData.fromShop == controller.shopCode)
+        ? (editData.fromShop == controller.shopCode.value)
         : true;
     String selectedShop = isEdit
         ? (isSending ? editData.toShop : editData.fromShop)
-        : (controller.shopCode == 'NK' ? 'NP' : 'NK');
+        : (controller.shopCode.value == 'NK' ? 'NP' : 'NK');
 
     List<String> availableShops = [
       'NK',
       'NP',
       'PT',
-    ].where((s) => s != controller.shopCode).toList();
+    ].where((s) => s != controller.shopCode.value).toList();
 
     // Pre-fill controllers if editing
     final qtyCtrl = TextEditingController(
@@ -1647,11 +1671,11 @@ class ReportsPage extends StatelessWidget {
                                   date: editData
                                       .date, // Retain original timestamp
                                   fromShop: isSending
-                                      ? controller.shopCode
+                                      ? controller.shopCode.value
                                       : selectedShop,
                                   toShop: isSending
                                       ? selectedShop
-                                      : controller.shopCode,
+                                      : controller.shopCode.value,
                                   itemType: itemType,
                                   qty: qty,
                                   weight1: wt1,
@@ -2424,8 +2448,8 @@ class ReportsPage extends StatelessWidget {
                   // Filter individual transfers
                   var filtered = controller.transfersList.where((t) {
                     bool matchesShop = isReceived
-                        ? t.toShop == controller.shopCode
-                        : t.fromShop == controller.shopCode;
+                        ? t.toShop == controller.shopCode.value
+                        : t.fromShop == controller.shopCode.value;
                     bool matchesOther = isReceived
                         ? t.fromShop == otherShop
                         : t.toShop == otherShop;

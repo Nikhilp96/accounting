@@ -142,7 +142,11 @@ class DashboardPage extends GetView<DashboardController> {
                           ],
                         ),
                       ),
-                      const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 18),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.white54,
+                        size: 18,
+                      ),
                     ],
                   ),
                 ),
@@ -206,7 +210,79 @@ class DashboardPage extends GetView<DashboardController> {
                           ],
                         ),
                       ),
-                      const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.white70,
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // --- NEW: ALL SHOPS REPORT TILE ---
+              InkWell(
+                onTap: () => Get.toNamed(Routes.REPORTS, arguments: 'ALL'),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.brown.shade600, Colors.brown.shade800],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.brown.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.receipt_long_outlined,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'All Shops Report',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'View & filter ledgers by shop',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.white70,
+                        size: 16,
+                      ),
                     ],
                   ),
                 ),
@@ -218,27 +294,28 @@ class DashboardPage extends GetView<DashboardController> {
                 onTap: () async {
                   // Show loading spinner
                   Get.dialog(
-                    const Center(child: CircularProgressIndicator(color: Colors.white)),
+                    const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    ),
                     barrierDismissible: false,
                   );
-                  
+
                   // Generate Excel
                   String? path = await BackupService.exportToExcel();
-                  
+
                   // Close loading spinner
                   Get.back();
-                  
+
                   if (path != null) {
                     // Trigger Native Share Menu
-                    await Share.shareXFiles(
-                      [XFile(path)], 
-                      text: 'Shop Accounting Master Backup Database',
-                    );
+                    await Share.shareXFiles([
+                      XFile(path),
+                    ], text: 'Shop Accounting Master Backup Database');
                   } else {
                     Get.snackbar(
-                      'Error', 
-                      'Failed to generate backup or permissions denied.', 
-                      backgroundColor: Colors.red.shade700, 
+                      'Error',
+                      'Failed to generate backup or permissions denied.',
+                      backgroundColor: Colors.red.shade700,
                       colorText: Colors.white,
                     );
                   }
@@ -297,7 +374,11 @@ class DashboardPage extends GetView<DashboardController> {
                           ],
                         ),
                       ),
-                      const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 16),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.white70,
+                        size: 16,
+                      ),
                     ],
                   ),
                 ),

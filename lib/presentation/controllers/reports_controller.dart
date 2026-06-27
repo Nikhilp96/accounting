@@ -9,7 +9,8 @@ import '../../data/models/app_models.dart';
 import '../../data/repositories/repositories.dart';
 
 class ReportsController extends GetxController {
-  final String shopCode = Get.arguments ?? 'Unknown';
+  var shopCode = 'NK'.obs;
+  final List<String> availableShops = ['NK', 'NP', 'PT'];
 
   final PurchaseRepository _purchaseRepo = Get.find<PurchaseRepository>();
   final SalesRepository _salesRepo = Get.find<SalesRepository>();
@@ -36,10 +37,18 @@ class ReportsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    // Check if a specific shop was passed, otherwise default to 'NK'
+    String arg = Get.arguments?.toString() ?? 'NK';
+    if (availableShops.contains(arg)) {
+      shopCode.value = arg;
+    } else {
+      shopCode.value = 'NK'; // Default fallback for 'ALL'
+    }
     _loadTraders();
     fetchData();
     ever(viewMode, (_) => fetchData());
     ever(selectedDate, (_) => fetchData());
+    ever(shopCode, (_) => fetchData());
   }
 
   DateTime get _startDate {
@@ -86,10 +95,10 @@ class ReportsController extends GetxController {
 
       // Parallelize all independent queries using Future.wait
       final results = await Future.wait([
-        _purchaseRepo.getPurchasesByDateRange(shopCode, startIso, endIso),
-        _salesRepo.getSalesByDateRange(shopCode, startIso, endIso),
-        _expenseRepo.getExpensesByRange(shopCode, startIso, endIso),
-        _transferRepo.getTransfersForShop(shopCode, startIso, endIso),
+        _purchaseRepo.getPurchasesByDateRange(shopCode.value, startIso, endIso),
+        _salesRepo.getSalesByDateRange(shopCode.value, startIso, endIso),
+        _expenseRepo.getExpensesByRange(shopCode.value, startIso, endIso),
+        _transferRepo.getTransfersForShop(shopCode.value, startIso, endIso),
         _loadStockData(),
       ]);
 
@@ -113,8 +122,8 @@ class ReportsController extends GetxController {
     // Fire all 8 stock queries in parallel (4 categories × 2 dates)
     final futures = <Future<StockModel?>>[];
     for (var cat in categories) {
-      futures.add(_stockRepo.getStock(shopCode, startIso, cat));
-      futures.add(_stockRepo.getStock(shopCode, endIso, cat));
+      futures.add(_stockRepo.getStock(shopCode.value, startIso, cat));
+      futures.add(_stockRepo.getStock(shopCode.value, endIso, cat));
     }
 
     final results = await Future.wait(futures);
@@ -144,7 +153,7 @@ class ReportsController extends GetxController {
     String endIso = _endDate.toIso8601String().split('T')[0];
 
     final openStock = StockModel(
-      shopCode: shopCode,
+      shopCode: shopCode.value,
       date: startIso,
       itemType: itemType,
       qty: stockMap['Opening_${itemType}_Qty'] ?? 0,
@@ -154,7 +163,7 @@ class ReportsController extends GetxController {
     await _stockRepo.saveStock(openStock);
 
     final closeStock = StockModel(
-      shopCode: shopCode,
+      shopCode: shopCode.value,
       date: endIso,
       itemType: itemType,
       qty: stockMap['Closing_${itemType}_Qty'] ?? 0,
@@ -219,7 +228,7 @@ class ReportsController extends GetxController {
   void editPurchase(PurchaseModel purchase) {
     Get.toNamed(
       '/purchase-entry',
-      arguments: {'shopCode': shopCode, 'purchase': purchase},
+      arguments: {'shopCode': shopCode.value, 'purchase': purchase},
     )?.then((_) {
       fetchData();
     });
@@ -228,7 +237,7 @@ class ReportsController extends GetxController {
   void editSale(SaleModel sale) {
     Get.toNamed(
       '/sales-entry',
-      arguments: {'shopCode': shopCode, 'sale': sale},
+      arguments: {'shopCode': shopCode.value, 'sale': sale},
     )?.then((_) {
       fetchData();
     });
@@ -389,7 +398,7 @@ class ReportsController extends GetxController {
     // If not, you can use: Get.to(() => const ExpenseEntryPage(), arguments: {'shopCode': shopCode, 'expense': expense})?.then((_) { fetchData(); });
     Get.toNamed(
       Routes.EXPENSE_ENTRY, // Adjust to your actual route name if different
-      arguments: {'shopCode': shopCode, 'expense': expense},
+      arguments: {'shopCode': shopCode.value, 'expense': expense},
     )?.then((_) {
       fetchData();
     });
@@ -398,7 +407,7 @@ class ReportsController extends GetxController {
   Future<void> exportReportToExcel() async {
     try {
       String savedPath = await ReportExportService.exportReport(
-        shopCode: shopCode,
+        shopCode: shopCode.value,
         startDate: _startDate,
         endDate: _endDate,
         purchases: purchasesList,
@@ -443,8 +452,8 @@ class ReportsController extends GetxController {
     return transfersList
         .where((t) {
           bool matchesShop = isReceived
-              ? t.toShop == shopCode
-              : t.fromShop == shopCode;
+              ? t.toShop == shopCode.value
+              : t.fromShop == shopCode.value;
 
           // Filter by the specific other shop if provided
           bool matchesOther =
@@ -471,8 +480,8 @@ class ReportsController extends GetxController {
   ) async {
     final transfer = TransferModel(
       date: selectedDate.value.toIso8601String(),
-      fromShop: isSending ? shopCode : otherShop,
-      toShop: isSending ? otherShop : shopCode,
+      fromShop: isSending ? shopCode.value : otherShop,
+      toShop: isSending ? otherShop : shopCode.value,
       itemType: itemType,
       qty: qty,
       weight1: wt1,
@@ -485,7 +494,7 @@ class ReportsController extends GetxController {
 
     Get.snackbar(
       'Transfer Saved',
-      'Successfully logged transfer between $shopCode and $otherShop.',
+      'Successfully logged transfer between ${shopCode.value} and $otherShop.',
       backgroundColor: Colors.green.shade700,
       colorText: Colors.white,
     );
@@ -498,13 +507,17 @@ class ReportsController extends GetxController {
       BackupManager.instance.scheduleBackup();
       fetchData();
       Get.snackbar(
-        'Updated', 
+        'Updated',
         'Transfer record updated successfully.',
         backgroundColor: Colors.blue.shade700,
         colorText: Colors.white,
       );
     } catch (e) {
-      Get.snackbar('Error', 'Failed to update transfer: $e', backgroundColor: Colors.red);
+      Get.snackbar(
+        'Error',
+        'Failed to update transfer: $e',
+        backgroundColor: Colors.red,
+      );
     }
   }
 
@@ -514,13 +527,17 @@ class ReportsController extends GetxController {
       BackupManager.instance.scheduleBackup();
       fetchData();
       Get.snackbar(
-        'Deleted', 
+        'Deleted',
         'Transfer record removed.',
         backgroundColor: Colors.red.shade700,
         colorText: Colors.white,
       );
     } catch (e) {
-      Get.snackbar('Error', 'Failed to delete transfer: $e', backgroundColor: Colors.red);
+      Get.snackbar(
+        'Error',
+        'Failed to delete transfer: $e',
+        backgroundColor: Colors.red,
+      );
     }
   }
 }
