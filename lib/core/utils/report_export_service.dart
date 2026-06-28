@@ -1,3 +1,4 @@
+// lib/core/utils/report_export_service.dart
 import 'dart:io';
 import 'package:excel/excel.dart';
 import 'package:intl/intl.dart';
@@ -18,6 +19,8 @@ class ReportExportService {
     required double totalPurchases,
     required double totalExpenses,
     required double netPosition,
+    // --- NEW: Added salesPiecesData parameter ---
+    required Map<String, Map<String, double>> salesPiecesData,
   }) async {
     var excel = Excel.createExcel();
 
@@ -43,7 +46,8 @@ class ReportExportService {
       TextCellValue('Net Cash Position'),
       DoubleCellValue(netPosition),
     ]);
-    summarySheet.appendRow([TextCellValue('')]); // Blank Row
+
+    summarySheet.appendRow([TextCellValue('')]); // Blank row
 
     // Trader Payables
     summarySheet.appendRow([TextCellValue('AMOUNT PAYABLE TO TRADERS')]);
@@ -59,19 +63,21 @@ class ReportExportService {
     summarySheet.appendRow([TextCellValue('')]); // Blank Row
 
     // Bird's Eye View
-    summarySheet.appendRow([TextCellValue("BIRD'S EYE VIEW (kg)")]);
+    summarySheet.appendRow([TextCellValue('BIRDS EYE VIEW (kg)')]);
     summarySheet.appendRow([
       TextCellValue('Item'),
       TextCellValue('Purchase'),
       TextCellValue('Sales'),
+      TextCellValue('Dead'),
       TextCellValue('Difference'),
     ]);
     birdsEyeView.forEach((item, data) {
       summarySheet.appendRow([
         TextCellValue(item),
-        DoubleCellValue(data['Purchase'] ?? 0.0),
-        DoubleCellValue(data['Sales'] ?? 0.0),
-        DoubleCellValue(data['Difference'] ?? 0.0),
+        DoubleCellValue(data['Purchase']!),
+        DoubleCellValue(data['Sales']!),
+        DoubleCellValue(data['Dead']!),
+        DoubleCellValue(data['Difference']!),
       ]);
     });
 
@@ -79,10 +85,10 @@ class ReportExportService {
     Sheet purSheet = excel['Purchases'];
     purSheet.appendRow([
       TextCellValue('Date'),
-      TextCellValue('Item Type'),
+      TextCellValue('Type'),
       TextCellValue('Qty'),
-      TextCellValue('Small/DP Wt'),
-      TextCellValue('Big/OG Wt'),
+      TextCellValue('Wt1'),
+      TextCellValue('Wt2'),
       TextCellValue('Rate'),
       TextCellValue('Amount'),
     ]);
@@ -90,7 +96,7 @@ class ReportExportService {
       purSheet.appendRow([
         TextCellValue(p.date.split('T')[0]),
         TextCellValue(p.itemType),
-        DoubleCellValue(p.quantity.toDouble()),
+        DoubleCellValue(p.quantity),
         DoubleCellValue(p.weight1 ?? 0.0),
         DoubleCellValue(p.weight2 ?? 0.0),
         DoubleCellValue(p.rate),
@@ -98,57 +104,42 @@ class ReportExportService {
       ]);
     }
 
-    // --- SHEET 3: SALES (UPDATED WITH QUANTITIES & BALANCES) ---
+    // --- SHEET 3: SALES ---
     Sheet salesSheet = excel['Sales'];
     salesSheet.appendRow([
       TextCellValue('Date'),
-      TextCellValue('Broiler Qty'),
-      TextCellValue('Broiler Wt'),
-      TextCellValue('Mutton Qty'),
-      TextCellValue('Mutton Wt'),
-      TextCellValue('Mutton Opening Wt'),
-      TextCellValue('Mutton Closing Wt'),
-      TextCellValue('DP Qty'),
-      TextCellValue('DP Wt'),
-      TextCellValue('OG Qty'),
-      TextCellValue('OG Wt'),
-      TextCellValue('Eggs (Pcs)'),
-      TextCellValue('Pota Qty'),
-      TextCellValue('Pota Wt'),
-      TextCellValue('Dead Broiler Wt'),
-      TextCellValue('Dead DP Wt'),
-      TextCellValue('Dead OG Wt'),
-      TextCellValue('System Amt (₹)'),
-      TextCellValue('Collected Amt (₹)'),
-      TextCellValue('Difference (₹)'),
+      TextCellValue('Broiler (Qty/Wt/Dead/DWt)'),
+      TextCellValue('Mutton (Qty/Wt)'),
+      TextCellValue('DP (Qty/Wt/Dead/DWt)'),
+      TextCellValue('OG (Qty/Wt/Dead/DWt)'),
+      TextCellValue('Egg Qty'),
+      TextCellValue('Pota (Qty/Wt)'),
+      TextCellValue('System Amt'),
+      TextCellValue('Collected Amt'),
+      TextCellValue('Diff'),
     ]);
-
     for (var s in sales) {
       salesSheet.appendRow([
         TextCellValue(s.date.split('T')[0]),
-        IntCellValue(s.broilerQty),
-        DoubleCellValue(s.broilerWt),
-        IntCellValue(s.muttonQty),
-        DoubleCellValue(s.muttonWt),
-        DoubleCellValue(s.muttonOpeningWt),
-        DoubleCellValue(s.muttonClosingWt),
-        IntCellValue(s.dpQty),
-        DoubleCellValue(s.dpWt),
-        IntCellValue(s.ogQty),
-        DoubleCellValue(s.ogWt),
+        TextCellValue(
+          '${s.broilerQty} / ${s.broilerWt} / ${s.broilerDeadQty} / ${s.broilerDeadWt}',
+        ),
+        TextCellValue('${s.muttonQty} / ${s.muttonWt}'),
+        TextCellValue(
+          '${s.dpQty} / ${s.dpWt} / ${s.dpDeadQty} / ${s.dpDeadWt}',
+        ),
+        TextCellValue(
+          '${s.ogQty} / ${s.ogWt} / ${s.ogDeadQty} / ${s.ogDeadWt}',
+        ),
         IntCellValue(s.eggQty),
-        IntCellValue(s.potaKalejiQty),
-        DoubleCellValue(s.potaKalejiWt),
-        DoubleCellValue(s.broilerDeadWt),
-        DoubleCellValue(s.dpDeadWt),
-        DoubleCellValue(s.ogDeadWt),
+        TextCellValue('${s.potaKalejiQty} / ${s.potaKalejiWt}'),
         DoubleCellValue(s.sellingAmount),
         DoubleCellValue(s.totalAmount),
         DoubleCellValue(s.difference),
       ]);
     }
 
-    // --- SHEET 4: EXPENSES (REMOVED NOTES COLUMN) ---
+    // --- SHEET 4: EXPENSES ---
     Sheet expSheet = excel['Expenses'];
     expSheet.appendRow([
       TextCellValue('Date'),
@@ -162,6 +153,34 @@ class ReportExportService {
         TextCellValue(e.category),
         DoubleCellValue(e.amount),
         TextCellValue(e.notes),
+      ]);
+    }
+
+    // --- SHEET 5: UNITS (NEW!) ---
+    Sheet unitsSheet = excel['Units'];
+    unitsSheet.appendRow([
+      TextCellValue('Date'),
+      TextCellValue('Broiler Small'),
+      TextCellValue('Broiler Big'),
+      TextCellValue('DP'),
+      TextCellValue('OG'),
+      TextCellValue('Egg'),
+      TextCellValue('Pota Kalegi'),
+    ]);
+
+    // Sort dates chronologically before writing
+    var sortedDates = salesPiecesData.keys.toList()..sort();
+
+    for (String date in sortedDates) {
+      var dataMap = salesPiecesData[date]!;
+      unitsSheet.appendRow([
+        TextCellValue(date),
+        DoubleCellValue(dataMap['Broiler Small'] ?? 0.0),
+        DoubleCellValue(dataMap['Broiler Big'] ?? 0.0),
+        DoubleCellValue(dataMap['DP'] ?? 0.0),
+        DoubleCellValue(dataMap['OG'] ?? 0.0),
+        DoubleCellValue(dataMap['Egg'] ?? 0.0),
+        DoubleCellValue(dataMap['Pota Kalegi'] ?? 0.0),
       ]);
     }
 
@@ -182,13 +201,11 @@ class ReportExportService {
 
     File file = File('${dir.path}/$fileName');
 
-    // Write and save the file
-    final fileBytes = excel.encode();
+    var fileBytes = excel.save();
     if (fileBytes != null) {
       await file.writeAsBytes(fileBytes);
+      await MediaScanner.loadMedia(path: file.path);
     }
-
-    MediaScanner.loadMedia(path: file.path);
 
     return file.path;
   }

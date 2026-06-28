@@ -174,16 +174,31 @@ class SalesRepository {
 class StockRepository {
   final DatabaseHelper dbHelper = DatabaseHelper.instance;
 
+  // UPDATED: Added isWt2 flag to differentiate Small/DP vs Big/OG
   Future<StockModel?> getStock(
     String shopCode,
     String date,
-    String itemType,
-  ) async {
+    String itemType, {
+    bool isWt2 = false,
+  }) async {
     final db = await dbHelper.database;
+
+    String whereClause = 'shop_code = ? AND date = ? AND item_type = ?';
+    List<dynamic> whereArgs = [shopCode, date, itemType];
+
+    // Differentiate rows for Birds
+    if (itemType == 'Broiler' || itemType == 'Desi') {
+      if (isWt2) {
+        whereClause += ' AND weight_1 = 0'; // Identifies the Big/OG row
+      } else {
+        whereClause += ' AND weight_2 = 0'; // Identifies the Small/DP row
+      }
+    }
+
     final maps = await db.query(
       DatabaseHelper.tableStock,
-      where: 'shop_code = ? AND date = ? AND item_type = ?',
-      whereArgs: [shopCode, date, itemType],
+      where: whereClause,
+      whereArgs: whereArgs,
     );
     if (maps.isNotEmpty) {
       return StockModel.fromMap(maps.first);
@@ -193,13 +208,22 @@ class StockRepository {
 
   Future<void> saveStock(StockModel stock) async {
     final db = await dbHelper.database;
-    final existing = await getStock(stock.shopCode, stock.date, stock.itemType);
+
+    // Determine if this model represents a Big/OG bird
+    bool isWt2 =
+        (stock.itemType == 'Broiler' || stock.itemType == 'Desi') &&
+        (stock.weight2 > 0 || stock.weight1 == 0);
+
+    final existing = await getStock(
+      stock.shopCode,
+      stock.date,
+      stock.itemType,
+      isWt2: isWt2,
+    );
 
     if (existing != null) {
-      // Create a map without the ID for the update payload
       final updateData = stock.toMap();
       updateData.remove('id');
-
       await db.update(
         DatabaseHelper.tableStock,
         updateData,
@@ -207,11 +231,8 @@ class StockRepository {
         whereArgs: [existing.id],
       );
     } else {
-      // For insertion, we don't include the ID at all,
-      // let SQLite handle the AUTOINCREMENT
       final insertData = stock.toMap();
       insertData.remove('id');
-
       await db.insert(DatabaseHelper.tableStock, insertData);
     }
   }

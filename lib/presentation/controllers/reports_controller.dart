@@ -106,78 +106,71 @@ class ReportsController extends GetxController {
       salesList.value = results[1] as List<SaleModel>;
       expensesList.value = results[2] as List<ExpenseModel>;
       transfersList.value = results[3] as List<TransferModel>;
+
+      await calculateSalesPieces();
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Fetches historical stock balances for the selected date range (parallelized)
+  // Fetches historical stock balances for the selected date range
   Future<void> _loadStockData() async {
     stockMap.clear();
-    String startIso = _startDate.toIso8601String().split('T')[0];
-    String endIso = _endDate.toIso8601String().split('T')[0];
+
+    // FIX 1: Opening stock is the closing stock of the day BEFORE the period starts!
+    String openDateIso = _startDate
+        .subtract(const Duration(days: 1))
+        .toIso8601String()
+        .split('T')[0];
+    String closeDateIso = _endDate.toIso8601String().split('T')[0];
 
     List<String> categories = ['Broiler', 'Desi', 'Eggs', 'Pota Kalegi'];
 
-    // Fire all 8 stock queries in parallel (4 categories × 2 dates)
-    final futures = <Future<StockModel?>>[];
     for (var cat in categories) {
-      futures.add(_stockRepo.getStock(shopCode.value, startIso, cat));
-      futures.add(_stockRepo.getStock(shopCode.value, endIso, cat));
+      // FIX 2: Fetch both Small/DP (Wt1) AND Big/OG (Wt2) rows from the database
+
+      // Fetch Small/DP (isWt2: false)
+      var open1 = await _stockRepo.getStock(
+        shopCode.value,
+        openDateIso,
+        cat,
+        isWt2: false,
+      );
+      var close1 = await _stockRepo.getStock(
+        shopCode.value,
+        closeDateIso,
+        cat,
+        isWt2: false,
+      );
+
+      // Fetch Big/OG (isWt2: true)
+      var open2 = await _stockRepo.getStock(
+        shopCode.value,
+        openDateIso,
+        cat,
+        isWt2: true,
+      );
+      var close2 = await _stockRepo.getStock(
+        shopCode.value,
+        closeDateIso,
+        cat,
+        isWt2: true,
+      );
+
+      // Merge quantities and weights into the UI stockMap
+      double openQty = (open1?.qty ?? 0.0) + (open2?.qty ?? 0.0);
+      double closeQty = (close1?.qty ?? 0.0) + (close2?.qty ?? 0.0);
+
+      stockMap['Opening_${cat}_Qty'] = openQty;
+      stockMap['Opening_${cat}_Wt1'] = open1?.weight1 ?? 0.0;
+      stockMap['Opening_${cat}_Wt2'] =
+          open2?.weight2 ?? 0.0; // Now accurately populates Big Wt
+
+      stockMap['Closing_${cat}_Qty'] = closeQty;
+      stockMap['Closing_${cat}_Wt1'] = close1?.weight1 ?? 0.0;
+      stockMap['Closing_${cat}_Wt2'] =
+          close2?.weight2 ?? 0.0; // Now accurately populates Big Wt
     }
-
-    final results = await Future.wait(futures);
-
-    // Process results: pairs of [opening, closing] per category
-    for (int i = 0; i < categories.length; i++) {
-      final cat = categories[i];
-      final openStock = results[i * 2];
-      final closeStock = results[i * 2 + 1];
-
-      if (openStock != null) {
-        stockMap['Opening_${cat}_Qty'] = openStock.qty;
-        stockMap['Opening_${cat}_Wt1'] = openStock.weight1;
-        stockMap['Opening_${cat}_Wt2'] = openStock.weight2;
-      }
-      if (closeStock != null) {
-        stockMap['Closing_${cat}_Qty'] = closeStock.qty;
-        stockMap['Closing_${cat}_Wt1'] = closeStock.weight1;
-        stockMap['Closing_${cat}_Wt2'] = closeStock.weight2;
-      }
-    }
-  }
-
-  // Saves the inputs back to the database
-  Future<void> saveStockData(String itemType) async {
-    String startIso = _startDate.toIso8601String().split('T')[0];
-    String endIso = _endDate.toIso8601String().split('T')[0];
-
-    final openStock = StockModel(
-      shopCode: shopCode.value,
-      date: startIso,
-      itemType: itemType,
-      qty: stockMap['Opening_${itemType}_Qty'] ?? 0,
-      weight1: stockMap['Opening_${itemType}_Wt1'] ?? 0.0,
-      weight2: stockMap['Opening_${itemType}_Wt2'] ?? 0.0,
-    );
-    await _stockRepo.saveStock(openStock);
-
-    final closeStock = StockModel(
-      shopCode: shopCode.value,
-      date: endIso,
-      itemType: itemType,
-      qty: stockMap['Closing_${itemType}_Qty'] ?? 0,
-      weight1: stockMap['Closing_${itemType}_Wt1'] ?? 0.0,
-      weight2: stockMap['Closing_${itemType}_Wt2'] ?? 0.0,
-    );
-    await _stockRepo.saveStock(closeStock);
-    BackupManager.instance.scheduleBackup();
-    Get.snackbar(
-      'Saved',
-      '$itemType balances updated successfully.',
-      backgroundColor: Colors.green.shade700,
-      colorText: Colors.white,
-    );
   }
 
   // --- Deletes & Edits ---
@@ -419,6 +412,7 @@ class ReportsController extends GetxController {
         totalPurchases: totalPurchases,
         totalExpenses: totalWeeklyExpenses,
         netPosition: netPosition,
+        salesPiecesData: salesPiecesData,
       );
 
       Get.snackbar(
@@ -470,74 +464,114 @@ class ReportsController extends GetxController {
         });
   }
 
-  Future<void> saveTransfer(
-    String itemType,
-    bool isSending,
-    String otherShop,
-    double qty,
-    double wt1,
-    double wt2,
-  ) async {
-    final transfer = TransferModel(
-      date: selectedDate.value.toIso8601String(),
-      fromShop: isSending ? shopCode.value : otherShop,
-      toShop: isSending ? otherShop : shopCode.value,
-      itemType: itemType,
-      qty: qty,
-      weight1: wt1,
-      weight2: wt2,
-    );
+  // Inside ReportsController
+  var salesPiecesData = <String, Map<String, double>>{}
+      .obs; // Key: Date, Value: Map of Category -> Selling Unit
+  final listCategories = [
+    'Broiler Small',
+    'Broiler Big',
+    'DP',
+    'OG',
+    'Egg',
+    'Pota Kalegi',
+  ];
 
-    await _transferRepo.addTransfer(transfer);
-    BackupManager.instance.scheduleBackup();
-    fetchData();
+  Future<void> calculateSalesPieces() async {
+    salesPiecesData.clear();
+    DateTime start = _startDate;
+    DateTime end = _endDate;
 
-    Get.snackbar(
-      'Transfer Saved',
-      'Successfully logged transfer between ${shopCode.value} and $otherShop.',
-      backgroundColor: Colors.green.shade700,
-      colorText: Colors.white,
-    );
-  }
+    for (
+      DateTime d = start;
+      d.isBefore(end);
+      d = d.add(const Duration(days: 1))
+    ) {
+      String dateStr = d.toIso8601String().split('T')[0];
+      salesPiecesData[dateStr] = {};
 
-  // --- NEW: Edit and Delete Transfer Logic ---
-  Future<void> updateTransferRecord(TransferModel updatedTransfer) async {
-    try {
-      await _transferRepo.updateTransfer(updatedTransfer);
-      BackupManager.instance.scheduleBackup();
-      fetchData();
-      Get.snackbar(
-        'Updated',
-        'Transfer record updated successfully.',
-        backgroundColor: Colors.blue.shade700,
-        colorText: Colors.white,
-      );
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to update transfer: $e',
-        backgroundColor: Colors.red,
-      );
+      for (String cat in listCategories) {
+        bool isWt1 =
+            (cat == 'Broiler Small' ||
+            cat == 'DP' ||
+            cat == 'Egg' ||
+            cat == 'Pota Kalegi');
+        String type = 'Unknown';
+        if (cat.contains('Broiler')) type = 'Broiler';
+        if (cat == 'DP' || cat == 'OG') type = 'Desi';
+        if (cat == 'Egg') type = 'Eggs';
+        if (cat == 'Pota Kalegi') type = 'Pota Kalegi';
+
+        // 1. Opening Stock (Yesterday's Closing)
+        String yestStr = d
+            .subtract(const Duration(days: 1))
+            .toIso8601String()
+            .split('T')[0];
+        var openStock = await _stockRepo.getStock(
+          shopCode.value,
+          yestStr,
+          type,
+          isWt2: !isWt1,
+        );
+        double openQty = openStock?.qty ?? 0.0;
+
+        // 2. Closing Stock (Today's Closing)
+        var closeStock = await _stockRepo.getStock(
+          shopCode.value,
+          dateStr,
+          type,
+          isWt2: !isWt1,
+        );
+        double closeQty = closeStock?.qty ?? 0.0;
+
+        // 3. Purchase Qty
+        double purQty = 0;
+        for (var p in purchasesList.where(
+          (p) => p.date.startsWith(dateStr) && p.itemType == type,
+        )) {
+          // Ensure it belongs to the correct category split
+          if (type == 'Broiler' || type == 'Desi') {
+            if (isWt1 && (p.weight1 ?? 0) > 0) purQty += p.quantity;
+            if (!isWt1 && (p.weight2 ?? 0) > 0) purQty += p.quantity;
+          } else {
+            purQty += p.quantity;
+          }
+        }
+
+        // 4. Transfers In/Out
+        double recQty = 0;
+        double sentQty = 0;
+        var dayTransfers = transfersList.where(
+          (t) => t.date.startsWith(dateStr) && t.itemType == type,
+        );
+
+        for (var t in dayTransfers) {
+          bool matchesCat = (type == 'Broiler' || type == 'Desi')
+              ? (isWt1 ? t.weight1 > 0 : t.weight2 > 0)
+              : true;
+
+          if (matchesCat) {
+            if (t.toShop == shopCode.value) recQty += t.qty;
+            if (t.fromShop == shopCode.value) sentQty += t.qty;
+          }
+        }
+
+        // 5. Calculate Equation
+        double sellingUnit = openQty + purQty + recQty - sentQty - closeQty;
+        salesPiecesData[dateStr]![cat] = sellingUnit;
+      }
     }
   }
 
-  Future<void> deleteTransferRecord(int id) async {
-    try {
-      await _transferRepo.deleteTransfer(id);
-      BackupManager.instance.scheduleBackup();
+  void editStockMovement(String dateStr) {
+    DateTime targetDate = DateTime.parse(dateStr);
+
+    // Navigate to the Stock Movement screen, passing both shopCode and the specific date
+    Get.toNamed(
+      '/stock-movement', // Ensure this matches your route name in app_routes.dart
+      arguments: {'shopCode': shopCode.value, 'date': targetDate},
+    )?.then((_) {
+      // Refresh the data when the user comes back!
       fetchData();
-      Get.snackbar(
-        'Deleted',
-        'Transfer record removed.',
-        backgroundColor: Colors.red.shade700,
-        colorText: Colors.white,
-      );
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to delete transfer: $e',
-        backgroundColor: Colors.red,
-      );
-    }
+    });
   }
 }

@@ -120,7 +120,7 @@ class ReportsPage extends StatelessWidget {
                       _buildMortalityTable(controller.salesList),
                     ],
                   );
-                } else {
+                } else if (controller.activeTab.value == 'Expenses') {
                   if (controller.expensesList.isEmpty) {
                     return _buildEmptyState(
                       'No expenses in this period.',
@@ -128,6 +128,8 @@ class ReportsPage extends StatelessWidget {
                     );
                   }
                   return _buildExpensesTable(controller.expensesList);
+                } else {
+                  return _buildSalesPiecesTable(controller);
                 }
               }),
             ],
@@ -264,6 +266,7 @@ class ReportsPage extends StatelessWidget {
           Expanded(child: _buildTabButton('Purchases', controller)),
           Expanded(child: _buildTabButton('Sales', controller)),
           Expanded(child: _buildTabButton('Expenses', controller)),
+          Expanded(child: _buildTabButton('Units', controller)),
         ],
       ),
     );
@@ -892,21 +895,7 @@ class ReportsPage extends StatelessWidget {
     closeCells.addAll([
       const DataCell(Text('-')),
       const DataCell(Text('-')),
-      DataCell(
-        ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: themeColor,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          icon: const Icon(Icons.save, size: 16),
-          label: const Text('Save'),
-          onPressed: () => controller.saveStockData(title),
-        ),
-      ),
+      DataCell(Text('-')),
     ]);
     rows.add(
       DataRow(
@@ -1289,20 +1278,6 @@ class ReportsPage extends StatelessWidget {
                     ),
                   ],
                 ),
-                ElevatedButton.icon(
-                  onPressed: () =>
-                      _showTransferDialog(context, controller, title),
-                  icon: const Icon(Icons.swap_horiz, size: 18),
-                  label: const Text('Transfer'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: themeColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -1318,411 +1293,6 @@ class ReportsPage extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showTransferDialog(
-    BuildContext context,
-    ReportsController controller,
-    String itemType, {
-    TransferModel? editData,
-  }) {
-    bool isEdit = editData != null;
-
-    // Pre-fill states based on whether we are editing or creating
-    bool isSending = isEdit
-        ? (editData.fromShop == controller.shopCode.value)
-        : true;
-    String selectedShop = isEdit
-        ? (isSending ? editData.toShop : editData.fromShop)
-        : (controller.shopCode.value == 'NK' ? 'NP' : 'NK');
-
-    List<String> availableShops = [
-      'NK',
-      'NP',
-      'PT',
-    ].where((s) => s != controller.shopCode.value).toList();
-
-    // Pre-fill controllers if editing
-    final qtyCtrl = TextEditingController(
-      text: isEdit && editData.qty > 0 ? editData.qty.toString() : '',
-    );
-    final wt1Ctrl = TextEditingController(
-      text: isEdit && editData.weight1 > 0 ? editData.weight1.toString() : '',
-    );
-    final wt2Ctrl = TextEditingController(
-      text: isEdit && editData.weight2 > 0 ? editData.weight2.toString() : '',
-    );
-
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        child: StatefulBuilder(
-          builder: (context, setState) {
-            // Dynamic theme colors based on the selected action
-            Color actionColor = isSending
-                ? Colors.purple.shade600
-                : Colors.teal.shade600;
-            Color bgColor = isSending
-                ? Colors.purple.shade50
-                : Colors.teal.shade50;
-
-            return Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // --- HEADER ---
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: bgColor,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            isSending ? Icons.call_made : Icons.call_received,
-                            color: actionColor,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Transfer $itemType',
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                isSending
-                                    ? 'Move stock out'
-                                    : 'Receive stock in',
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // --- MODERN SEGMENTED TOGGLE ---
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.all(4),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => setState(() => isSending = true),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isSending
-                                      ? Colors.white
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: isSending
-                                      ? [
-                                          const BoxShadow(
-                                            color: Colors.black12,
-                                            blurRadius: 4,
-                                          ),
-                                        ]
-                                      : null,
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  'Send Items',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: isSending
-                                        ? Colors.purple.shade700
-                                        : Colors.grey.shade600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => setState(() => isSending = false),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: !isSending
-                                      ? Colors.white
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: !isSending
-                                      ? [
-                                          const BoxShadow(
-                                            color: Colors.black12,
-                                            blurRadius: 4,
-                                          ),
-                                        ]
-                                      : null,
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  'Receive Items',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: !isSending
-                                        ? Colors.teal.shade700
-                                        : Colors.grey.shade600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // --- SHOP SELECTION ---
-                    DropdownButtonFormField<String>(
-                      value: selectedShop,
-                      decoration: InputDecoration(
-                        labelText: isSending
-                            ? 'Destination Shop'
-                            : 'Source Shop',
-                        prefixIcon: const Icon(Icons.storefront_outlined),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                      ),
-                      items: availableShops
-                          .map(
-                            (s) => DropdownMenuItem(
-                              value: s,
-                              child: Text('Shop $s'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => selectedShop = v!),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // --- QUANTITY FIELD ---
-                    TextField(
-                      controller: qtyCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'Quantity (Pcs)',
-                        prefixIcon: const Icon(Icons.numbers),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                      ),
-                      keyboardType: TextInputType.number,
-                    ),
-
-                    // --- WEIGHT FIELDS (IF BIRD) ---
-                    if (itemType == 'Broiler' || itemType == 'Desi') ...[
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: wt1Ctrl,
-                              decoration: InputDecoration(
-                                labelText: itemType == 'Broiler'
-                                    ? 'Small Wt'
-                                    : 'DP Wt',
-                                prefixIcon: const Icon(
-                                  Icons.scale_outlined,
-                                  size: 20,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                filled: true,
-                                fillColor: Colors.grey.shade50,
-                              ),
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              onChanged: (val) {
-                                if ((double.tryParse(val) ?? 0) > 0) {
-                                  wt2Ctrl.clear();
-                                }
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextField(
-                              controller: wt2Ctrl,
-                              decoration: InputDecoration(
-                                labelText: itemType == 'Broiler'
-                                    ? 'Big Wt'
-                                    : 'OG Wt',
-                                prefixIcon: const Icon(
-                                  Icons.scale_outlined,
-                                  size: 20,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                filled: true,
-                                fillColor: Colors.grey.shade50,
-                              ),
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              onChanged: (val) {
-                                if ((double.tryParse(val) ?? 0) > 0) {
-                                  wt1Ctrl.clear();
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 32),
-
-                    // --- ACTION BUTTONS ---
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextButton(
-                            onPressed: () => Get.back(),
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              'Cancel',
-                              style: TextStyle(color: Colors.grey.shade700),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 2,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              double qty = double.tryParse(qtyCtrl.text) ?? 0;
-                              double wt1 = double.tryParse(wt1Ctrl.text) ?? 0;
-                              double wt2 = double.tryParse(wt2Ctrl.text) ?? 0;
-
-                              // --- VALIDATION RULES ---
-                              if (qty <= 0 && wt1 <= 0 && wt2 <= 0) {
-                                Get.snackbar(
-                                  'Validation Error',
-                                  'Please enter a valid quantity or weight to proceed.',
-                                  backgroundColor: Colors.red.shade800,
-                                  colorText: Colors.white,
-                                  snackPosition: SnackPosition.BOTTOM,
-                                  margin: const EdgeInsets.all(16),
-                                  icon: const Icon(
-                                    Icons.error_outline,
-                                    color: Colors.white,
-                                  ),
-                                );
-                                return; // Stop execution
-                              }
-
-                              // If valid, execute save and dismiss
-                              if (isEdit) {
-                                final updatedTransfer = TransferModel(
-                                  id: editData.id,
-                                  date: editData
-                                      .date, // Retain original timestamp
-                                  fromShop: isSending
-                                      ? controller.shopCode.value
-                                      : selectedShop,
-                                  toShop: isSending
-                                      ? selectedShop
-                                      : controller.shopCode.value,
-                                  itemType: itemType,
-                                  qty: qty,
-                                  weight1: wt1,
-                                  weight2: wt2,
-                                );
-                                controller.updateTransferRecord(
-                                  updatedTransfer,
-                                );
-                              } else {
-                                controller.saveTransfer(
-                                  itemType,
-                                  isSending,
-                                  selectedShop,
-                                  qty,
-                                  wt1,
-                                  wt2,
-                                );
-                              }
-                              Get.back();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: actionColor,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 2,
-                            ),
-                            icon: Icon(isSending ? Icons.send : Icons.download),
-                            label: const Text(
-                              'Confirm',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
       ),
     );
   }
@@ -1747,6 +1317,7 @@ class ReportsPage extends StatelessWidget {
         child: TextFormField(
           key: ValueKey('${mapKey}_${controller.dateDisplay}'),
           initialValue: currentVal,
+          readOnly: true,
           keyboardType: TextInputType.numberWithOptions(decimal: !isInt),
           onChanged: (val) {
             if (isInt) {
@@ -1765,7 +1336,7 @@ class ReportsPage extends StatelessWidget {
           decoration: InputDecoration(
             isDense: true,
             filled: true,
-            fillColor: Colors.white,
+            fillColor: Colors.grey.shade100,
             contentPadding: const EdgeInsets.symmetric(
               vertical: 8,
               horizontal: 8,
@@ -2490,34 +2061,34 @@ class ReportsPage extends StatelessWidget {
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            IconButton(
-                              icon: Icon(
-                                Icons.edit_outlined,
-                                color: Colors.blue.shade700,
-                                size: 20,
-                              ),
-                              onPressed: () {
-                                Get.back(); // Close history dialog
-                                _showTransferDialog(
-                                  context,
-                                  controller,
-                                  itemType,
-                                  editData: t,
-                                ); // Open edit dialog
-                              },
-                            ),
-                            IconButton(
-                              icon: Icon(
-                                Icons.delete_outline,
-                                color: Colors.red.shade700,
-                                size: 20,
-                              ),
-                              onPressed: () {
-                                _confirmDelete(context, () {
-                                  controller.deleteTransferRecord(t.id!);
-                                });
-                              },
-                            ),
+                            // IconButton(
+                            //   icon: Icon(
+                            //     Icons.edit_outlined,
+                            //     color: Colors.blue.shade700,
+                            //     size: 20,
+                            //   ),
+                            //   onPressed: () {
+                            //     Get.back(); // Close history dialog
+                            //     _showTransferDialog(
+                            //       context,
+                            //       controller,
+                            //       itemType,
+                            //       editData: t,
+                            //     ); // Open edit dialog
+                            //   },
+                            // ),
+                            // IconButton(
+                            //   icon: Icon(
+                            //     Icons.delete_outline,
+                            //     color: Colors.red.shade700,
+                            //     size: 20,
+                            //   ),
+                            //   onPressed: () {
+                            //     _confirmDelete(context, () {
+                            //       controller.deleteTransferRecord(t.id!);
+                            //     });
+                            //   },
+                            // ),
                           ],
                         ),
                       );
@@ -2541,6 +2112,65 @@ class ReportsPage extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSalesPiecesTable(ReportsController controller) {
+    if (controller.salesPiecesData.isEmpty) {
+      return _buildEmptyState('No data for this period.', Icons.analytics);
+    }
+
+    List<DataColumn> cols = [
+      const DataColumn(
+        label: Text('Date', style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
+      ...controller.listCategories.map(
+        (c) => DataColumn(
+          label: Text(c, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+      ),
+      // NEW: Action Column
+      const DataColumn(
+        label: Text('Action', style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
+    ];
+
+    List<DataRow> rows = [];
+    controller.salesPiecesData.forEach((dateStr, catMap) {
+      List<DataCell> cells = [DataCell(Text(DateUtil.formatIso(dateStr)))];
+
+      for (String cat in controller.listCategories) {
+        cells.add(DataCell(Text(catMap[cat]!.toStringAsFixed(0))));
+      }
+
+      // NEW: Edit Button Cell
+      cells.add(
+        DataCell(
+          IconButton(
+            icon: Icon(Icons.edit_note, color: Colors.blue.shade700, size: 24),
+            tooltip: 'Edit Stock & Transfers for this Date',
+            onPressed: () => controller.editStockMovement(dateStr),
+          ),
+        ),
+      );
+
+      rows.add(DataRow(cells: cells));
+    });
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          headingRowColor: MaterialStateProperty.all(Colors.grey.shade100),
+          columns: cols,
+          rows: rows,
         ),
       ),
     );

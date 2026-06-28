@@ -102,6 +102,15 @@ class ShopHomePage extends StatelessWidget {
               const SizedBox(height: 16),
 
               _buildActionCard(
+                title: 'Stock Movement Log',
+                subtitle: 'Enter opening, closing, and transfer pieces',
+                icon: Icons.sync_alt,
+                color: Colors.purple,
+                onTap: () => Get.toNamed(Routes.STOCK_MOVEMENT, arguments: {'shopCode': shopCode}),
+              ),
+              const SizedBox(height: 16),
+
+              _buildActionCard(
                 title: 'View Reports & Ledgers',
                 subtitle: 'Analyze profit, balances, and expenses',
                 icon: Icons.analytics_outlined,
