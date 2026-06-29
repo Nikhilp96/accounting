@@ -117,7 +117,6 @@ class ReportsController extends GetxController {
   Future<void> _loadStockData() async {
     stockMap.clear();
 
-    // FIX 1: Opening stock is the closing stock of the day BEFORE the period starts!
     String openDateIso = _startDate
         .subtract(const Duration(days: 1))
         .toIso8601String()
@@ -127,9 +126,7 @@ class ReportsController extends GetxController {
     List<String> categories = ['Broiler', 'Desi', 'Eggs', 'Pota Kalegi'];
 
     for (var cat in categories) {
-      // FIX 2: Fetch both Small/DP (Wt1) AND Big/OG (Wt2) rows from the database
-
-      // Fetch Small/DP (isWt2: false)
+      // 1. Fetch primary row (Small/DP/Eggs/Pota)
       var open1 = await _stockRepo.getStock(
         shopCode.value,
         openDateIso,
@@ -143,19 +140,24 @@ class ReportsController extends GetxController {
         isWt2: false,
       );
 
-      // Fetch Big/OG (isWt2: true)
-      var open2 = await _stockRepo.getStock(
-        shopCode.value,
-        openDateIso,
-        cat,
-        isWt2: true,
-      );
-      var close2 = await _stockRepo.getStock(
-        shopCode.value,
-        closeDateIso,
-        cat,
-        isWt2: true,
-      );
+      StockModel? open2;
+      StockModel? close2;
+
+      // 2. Fetch secondary row (Big/OG) ONLY for split categories
+      if (cat == 'Broiler' || cat == 'Desi') {
+        open2 = await _stockRepo.getStock(
+          shopCode.value,
+          openDateIso,
+          cat,
+          isWt2: true,
+        );
+        close2 = await _stockRepo.getStock(
+          shopCode.value,
+          closeDateIso,
+          cat,
+          isWt2: true,
+        );
+      }
 
       // Merge quantities and weights into the UI stockMap
       double openQty = (open1?.qty ?? 0.0) + (open2?.qty ?? 0.0);
@@ -163,13 +165,11 @@ class ReportsController extends GetxController {
 
       stockMap['Opening_${cat}_Qty'] = openQty;
       stockMap['Opening_${cat}_Wt1'] = open1?.weight1 ?? 0.0;
-      stockMap['Opening_${cat}_Wt2'] =
-          open2?.weight2 ?? 0.0; // Now accurately populates Big Wt
+      stockMap['Opening_${cat}_Wt2'] = open2?.weight2 ?? 0.0;
 
       stockMap['Closing_${cat}_Qty'] = closeQty;
       stockMap['Closing_${cat}_Wt1'] = close1?.weight1 ?? 0.0;
-      stockMap['Closing_${cat}_Wt2'] =
-          close2?.weight2 ?? 0.0; // Now accurately populates Big Wt
+      stockMap['Closing_${cat}_Wt2'] = close2?.weight2 ?? 0.0;
     }
   }
 
