@@ -167,14 +167,17 @@ class StockMovementController extends GetxController {
     isLoading.value = true;
     String todayStr = date.value.toIso8601String().split('T')[0];
 
-    for (var cat in categories) {
-      var data = movementMap[cat]!;
-      var dbInfo = _getDbMapping(cat);
-      String type = dbInfo['type'];
-      bool isWt1 = dbInfo['isWt1'];
+    try {
+      // ---> NEW: Clear existing transfers for this shop and date to prevent duplicate summing
+      await _transferRepo.deleteTransfersByDateAndShop(todayStr, shopCode);
 
-      // Save Closing Stock
-    //  if (data.closeQty.value > 0 || data.closeWt.value > 0) {
+      for (var cat in categories) {
+        var data = movementMap[cat]!;
+        var dbInfo = _getDbMapping(cat);
+        String type = dbInfo['type'];
+        bool isWt1 = dbInfo['isWt1'];
+
+        // Save Closing Stock
         StockModel closing = StockModel(
           shopCode: shopCode,
           date: todayStr,
@@ -184,65 +187,73 @@ class StockMovementController extends GetxController {
           weight2: !isWt1 ? data.closeWt.value : 0.0,
         );
         await _stockRepo.saveStock(closing);
-    //  }
 
-      // Helper to save transfer
-      Future<void> _saveT(String to, String from, double q, double w) async {
-        if (q == 0 && w == 0) return;
-        await _transferRepo.addTransfer(
-          TransferModel(
-            date: todayStr,
-            fromShop: from,
-            toShop: to,
-            itemType: type,
-            qty: q,
-            weight1: isWt1 ? w : 0.0,
-            weight2: !isWt1 ? w : 0.0,
-          ),
-        );
-      }
+        // Helper to save transfer
+        Future<void> _saveT(String to, String from, double q, double w) async {
+          if (q == 0 && w == 0) return;
+          await _transferRepo.addTransfer(
+            TransferModel(
+              date: todayStr,
+              fromShop: from,
+              toShop: to,
+              itemType: type,
+              qty: q,
+              weight1: isWt1 ? w : 0.0,
+              weight2: !isWt1 ? w : 0.0,
+            ),
+          );
+        }
 
-      // Save Sends (ShopCode -> OtherShop)
-      await _saveT(
-        otherShops[0],
-        shopCode,
-        data.sendS1Qty.value,
-        data.sendS1Wt.value,
-      );
-      if (otherShops.length > 1) {
+        // Save Sends (ShopCode -> OtherShop)
         await _saveT(
-          otherShops[1],
+          otherShops[0],
           shopCode,
-          data.sendS2Qty.value,
-          data.sendS2Wt.value,
+          data.sendS1Qty.value,
+          data.sendS1Wt.value,
         );
-      }
+        if (otherShops.length > 1) {
+          await _saveT(
+            otherShops[1],
+            shopCode,
+            data.sendS2Qty.value,
+            data.sendS2Wt.value,
+          );
+        }
 
-      // Save Receives (OtherShop -> ShopCode)
-      await _saveT(
-        shopCode,
-        otherShops[0],
-        data.recvS1Qty.value,
-        data.recvS1Wt.value,
-      );
-      if (otherShops.length > 1) {
+        // Save Receives (OtherShop -> ShopCode)
         await _saveT(
           shopCode,
-          otherShops[1],
-          data.recvS2Qty.value,
-          data.recvS2Wt.value,
+          otherShops[0],
+          data.recvS1Qty.value,
+          data.recvS1Wt.value,
         );
+        if (otherShops.length > 1) {
+          await _saveT(
+            shopCode,
+            otherShops[1],
+            data.recvS2Qty.value,
+            data.recvS2Wt.value,
+          );
+        }
       }
+
+      isLoading.value = false;
+      Get.back();
+      Get.snackbar(
+        'Success',
+        'Stock Movement logged successfully.',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      isLoading.value = false;
+      Get.snackbar(
+        'Error',
+        'Failed to save stock movement: $e',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     }
-
-    isLoading.value = false;
-    Get.back();
-    Get.snackbar(
-      'Success',
-      'Stock Movement logged successfully.',
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
-    );
   }
 
   Map<String, dynamic> _getDbMapping(String category) {

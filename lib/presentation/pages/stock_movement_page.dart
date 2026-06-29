@@ -18,76 +18,78 @@ class StockMovementPage extends StatelessWidget {
         backgroundColor: Colors.purple.shade800,
         foregroundColor: Colors.white,
       ),
-      body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        return Column(
-          children: [
-            // Date Picker Header
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(16),
-              child: InkWell(
-                onTap: () => controller.pickDate(context),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.purple.shade50,
-                    border: Border.all(color: Colors.purple.shade200),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Date: ${DateUtil.format(controller.date.value)}',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.purple.shade900,
-                        ),
-                      ),
-                      Icon(Icons.calendar_month, color: Colors.purple.shade800),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            Expanded(
-              child: ListView.builder(
+      body: SafeArea(
+        child: Obx(() {
+          if (controller.isLoading.value) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return Column(
+            children: [
+              // Date Picker Header
+              Container(
+                color: Colors.white,
                 padding: const EdgeInsets.all(16),
-                itemCount: controller.categories.length,
-                itemBuilder: (context, index) {
-                  String cat = controller.categories[index];
-                  bool isPotaOrEgg = cat == 'Pota Kalegi' || cat == 'Egg';
-                  return _buildCategoryCard(controller, cat, isPotaOrEgg);
-                },
-              ),
-            ),
-
-            // Save Button
-            Container(
-              padding: const EdgeInsets.all(16),
-              color: Colors.white,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.purple.shade800,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 50),
+                child: InkWell(
+                  onTap: () => controller.pickDate(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.purple.shade50,
+                      border: Border.all(color: Colors.purple.shade200),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Date: ${DateUtil.format(controller.date.value)}',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.purple.shade900,
+                          ),
+                        ),
+                        Icon(Icons.calendar_month, color: Colors.purple.shade800),
+                      ],
+                    ),
+                  ),
                 ),
-                onPressed: controller.saveMovementLog,
-                child: const Text(
-                  'Save Stock Movement',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+        
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: controller.categories.length,
+                  itemBuilder: (context, index) {
+                    String cat = controller.categories[index];
+                    bool isPotaOrEgg = cat == 'Pota Kalegi' || cat == 'Egg';
+                    return _buildCategoryCard(controller, cat, isPotaOrEgg);
+                  },
                 ),
               ),
-            ),
-          ],
-        );
-      }),
+        
+              // Save Button
+              Container(
+                padding: const EdgeInsets.all(16),
+                color: Colors.white,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.purple.shade800,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 50),
+                  ),
+                  onPressed: controller.saveMovementLog,
+                  child: const Text(
+                    'Save Stock Movement',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }),
+      ),
     );
   }
 

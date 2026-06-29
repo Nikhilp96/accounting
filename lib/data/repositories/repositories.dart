@@ -396,6 +396,21 @@ class TransferRepository {
     );
   }
 
+  Future<void> deleteTransfersByDateAndShop(
+    String date,
+    String shopCode,
+  ) async {
+    final db = await DatabaseHelper.instance.database;
+
+    // Deletes any transfer on this date where the shop was either the sender or receiver.
+    // Ensure 'transfers' matches your actual database table name.
+    await db.delete(
+      'transfers',
+      where: 'date = ? AND (from_shop = ? OR to_shop = ?)',
+      whereArgs: [date, shopCode, shopCode],
+    );
+  }
+
   Future<int> deleteTransfer(int id) async {
     final db = await dbHelper.database;
     return await db.delete(
