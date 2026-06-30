@@ -33,6 +33,7 @@ class ReportsController extends GetxController {
   var transfersList = <TransferModel>[].obs;
 
   var expensesList = <ExpenseModel>[].obs;
+  var detailedDailyStock = <String, Map<String, DailyStockMovement>>{}.obs;
 
   @override
   void onInit() {
@@ -478,6 +479,7 @@ class ReportsController extends GetxController {
 
   Future<void> calculateSalesPieces() async {
     salesPiecesData.clear();
+    detailedDailyStock.clear();
     DateTime start = _startDate;
     DateTime end = _endDate;
 
@@ -488,6 +490,7 @@ class ReportsController extends GetxController {
     ) {
       String dateStr = d.toIso8601String().split('T')[0];
       salesPiecesData[dateStr] = {};
+      detailedDailyStock[dateStr] = {};
 
       for (String cat in listCategories) {
         bool isWt1 =
@@ -558,6 +561,14 @@ class ReportsController extends GetxController {
         // 5. Calculate Equation
         double sellingUnit = openQty + purQty + recQty - sentQty - closeQty;
         salesPiecesData[dateStr]![cat] = sellingUnit;
+
+        detailedDailyStock[dateStr]![cat] = DailyStockMovement(
+          open: openQty,
+          purchased: purQty,
+          received: recQty,
+          sent: sentQty,
+          close: closeQty,
+        );
       }
     }
   }

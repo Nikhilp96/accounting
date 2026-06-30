@@ -129,7 +129,12 @@ class ReportsPage extends StatelessWidget {
                   }
                   return _buildExpensesTable(controller.expensesList);
                 } else {
-                  return _buildSalesPiecesTable(controller);
+                  return Column(
+                    children: [
+                      _buildSalesPiecesTable(controller),
+                      _buildDailyStockLedger(controller),
+                    ],
+                  );
                 }
               }),
             ],
@@ -2173,6 +2178,214 @@ class ReportsPage extends StatelessWidget {
           rows: rows,
         ),
       ),
+    );
+  }
+
+  Widget _buildDailyStockLedger(ReportsController controller) {
+    if (controller.detailedDailyStock.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: Text(
+            'No stock data for this period.',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    // Sort dates chronologically (newest first)
+    List<String> sortedDates = controller.detailedDailyStock.keys.toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: sortedDates.length,
+      itemBuilder: (context, index) {
+        String dateStr = sortedDates[index];
+        var categoriesData = controller.detailedDailyStock[dateStr]!;
+
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 1,
+          child: ExpansionTile(
+            shape: const Border(), // Removes the default border when expanded
+            leading: CircleAvatar(
+              backgroundColor: Colors.teal.shade100,
+              child: Icon(
+                Icons.calendar_today,
+                size: 18,
+                color: Colors.teal.shade800,
+              ),
+            ),
+            title: Text(
+              DateUtil.formatIso(dateStr),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            subtitle: Text(
+              'Tap to view detailed stock movement',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+            children: [
+              // Wrap the DataTable in a SingleChildScrollView so it doesn't overflow horizontally on small screens
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  columnSpacing: 16,
+                  headingRowColor: WidgetStateProperty.resolveWith(
+                    (states) => Colors.grey.shade50,
+                  ),
+                  columns: [
+                    const DataColumn(
+                      label: Text(
+                        'Item',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const DataColumn(
+                      label: Text(
+                        'Open',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blueGrey,
+                        ),
+                      ),
+                    ),
+                    // Separated Purchase Column
+                    DataColumn(
+                      label: Text(
+                        'Purchase',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ),
+                    // Separated Transfer In Column
+                    const DataColumn(
+                      label: Text(
+                        '+ In (Trf)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ),
+                    const DataColumn(
+                      label: Text(
+                        '- Out (Trf)',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                    const DataColumn(
+                      label: Text(
+                        'Close',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blueGrey,
+                        ),
+                      ),
+                    ),
+                  ],
+                  rows: categoriesData.entries.map((entry) {
+                    String catName = entry.key;
+                    var move = entry.value;
+
+                    return DataRow(
+                      cells: [
+                        DataCell(
+                          Text(
+                            catName,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            move.open.toStringAsFixed(
+                              move.open % 1 == 0 ? 0 : 1,
+                            ),
+                          ),
+                        ),
+                        // Separated Purchase Cell
+                        DataCell(
+                          Text(
+                            move.purchased > 0
+                                ? '+${move.purchased.toStringAsFixed(move.purchased % 1 == 0 ? 0 : 1)}'
+                                : '-',
+                            style: TextStyle(
+                              color: move.purchased > 0
+                                  ? Colors.blue.shade700
+                                  : Colors.grey,
+                            ),
+                          ),
+                        ),
+                        // Separated Transfer In Cell
+                        DataCell(
+                          Text(
+                            move.received > 0
+                                ? '+${move.received.toStringAsFixed(move.received % 1 == 0 ? 0 : 1)}'
+                                : '-',
+                            style: TextStyle(
+                              color: move.received > 0
+                                  ? Colors.green.shade700
+                                  : Colors.grey,
+                            ),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            move.sent > 0
+                                ? '-${move.sent.toStringAsFixed(move.sent % 1 == 0 ? 0 : 1)}'
+                                : '-',
+                            style: TextStyle(
+                              color: move.sent > 0
+                                  ? Colors.red.shade700
+                                  : Colors.grey,
+                            ),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            move.close.toStringAsFixed(
+                              move.close % 1 == 0 ? 0 : 1,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+              // Action button to edit this day's movement
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => controller.editStockMovement(dateStr),
+                    icon: Icon(
+                      Icons.edit,
+                      size: 16,
+                      color: Colors.teal.shade700,
+                    ),
+                    label: Text(
+                      'Edit Stock',
+                      style: TextStyle(color: Colors.teal.shade700),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

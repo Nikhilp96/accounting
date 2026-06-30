@@ -387,3 +387,19 @@ class TransferModel {
     );
   }
 }
+
+class DailyStockMovement {
+  final double open;
+  final double purchased;
+  final double received;
+  final double sent;
+  final double close;
+
+  DailyStockMovement({
+    required this.open,
+    required this.purchased,
+    required this.received,
+    required this.sent,
+    required this.close,
+  });
+}
