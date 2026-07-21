@@ -94,12 +94,17 @@ class ReportsController extends GetxController {
       String startIso = _startDate.toIso8601String();
       String endIso = _endDate.toIso8601String();
 
+      // Use date-only format for transfers to handle both '2026-07-20' and
+      // '2026-07-20T00:00:00.000' stored formats consistently.
+      String startDateOnly = startIso.split('T')[0];
+      String endDateOnly = endIso.split('T')[0];
+
       // Parallelize all independent queries using Future.wait
       final results = await Future.wait([
         _purchaseRepo.getPurchasesByDateRange(shopCode.value, startIso, endIso),
         _salesRepo.getSalesByDateRange(shopCode.value, startIso, endIso),
         _expenseRepo.getExpensesByRange(shopCode.value, startIso, endIso),
-        _transferRepo.getTransfersForShop(shopCode.value, startIso, endIso),
+        _transferRepo.getTransfersForShop(shopCode.value, startDateOnly, endDateOnly),
         _loadStockData(),
       ]);
 

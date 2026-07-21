@@ -2147,7 +2147,11 @@ class ReportsPage extends StatelessWidget {
       List<DataCell> cells = [DataCell(Text(DateUtil.formatIso(dateStr)))];
 
       for (String cat in controller.listCategories) {
-        cells.add(DataCell(Text(catMap[cat]!.toStringAsFixed(0))));
+        final value = catMap[cat]!;
+        final display = cat == 'Pota Kalegi'
+            ? value.toStringAsFixed(2)
+            : value.toStringAsFixed(0);
+        cells.add(DataCell(Text(display)));
       }
 
       // NEW: Edit Button Cell
@@ -2297,6 +2301,11 @@ class ReportsPage extends StatelessWidget {
                   rows: categoriesData.entries.map((entry) {
                     String catName = entry.key;
                     var move = entry.value;
+                    bool isPota = catName == 'Pota Kalegi';
+
+                    String _fmt(double v) => isPota
+                        ? v.toStringAsFixed(2)
+                        : v.toStringAsFixed(v % 1 == 0 ? 0 : 1);
 
                     return DataRow(
                       cells: [
@@ -2307,17 +2316,13 @@ class ReportsPage extends StatelessWidget {
                           ),
                         ),
                         DataCell(
-                          Text(
-                            move.open.toStringAsFixed(
-                              move.open % 1 == 0 ? 0 : 1,
-                            ),
-                          ),
+                          Text(_fmt(move.open)),
                         ),
                         // Separated Purchase Cell
                         DataCell(
                           Text(
                             move.purchased > 0
-                                ? '+${move.purchased.toStringAsFixed(move.purchased % 1 == 0 ? 0 : 1)}'
+                                ? '+${_fmt(move.purchased)}'
                                 : '-',
                             style: TextStyle(
                               color: move.purchased > 0
@@ -2330,7 +2335,7 @@ class ReportsPage extends StatelessWidget {
                         DataCell(
                           Text(
                             move.received > 0
-                                ? '+${move.received.toStringAsFixed(move.received % 1 == 0 ? 0 : 1)}'
+                                ? '+${_fmt(move.received)}'
                                 : '-',
                             style: TextStyle(
                               color: move.received > 0
@@ -2342,7 +2347,7 @@ class ReportsPage extends StatelessWidget {
                         DataCell(
                           Text(
                             move.sent > 0
-                                ? '-${move.sent.toStringAsFixed(move.sent % 1 == 0 ? 0 : 1)}'
+                                ? '-${_fmt(move.sent)}'
                                 : '-',
                             style: TextStyle(
                               color: move.sent > 0
@@ -2352,11 +2357,7 @@ class ReportsPage extends StatelessWidget {
                           ),
                         ),
                         DataCell(
-                          Text(
-                            move.close.toStringAsFixed(
-                              move.close % 1 == 0 ? 0 : 1,
-                            ),
-                          ),
+                          Text(_fmt(move.close)),
                         ),
                       ],
                     );
